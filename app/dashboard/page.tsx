@@ -16,7 +16,14 @@ export default function DashboardPage() {
       try {
         setLoading(true)
         const overview = await api.getDashboardOverview()
-        setData(overview)
+
+        const safeData = {
+          ...overview,
+          campaignPerformance: overview.campaignPerformance || [],
+          recentActivity: overview.recentActivity || [],
+        }
+
+        setData(safeData)
         setError(null)
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err)
@@ -140,25 +147,29 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data.campaignPerformance.map((campaign, index) => (
-                  <div key={index} className="border-b border-zinc-800 last:border-0 pb-3 last:pb-0">
-                    <h4 className="font-medium text-white text-sm mb-2">{campaign.name}</h4>
-                    <div className="grid grid-cols-3 gap-3 text-xs">
-                      <div>
-                        <span className="text-gray-500">Open Rate</span>
-                        <div className="font-semibold text-green-400">{campaign.openRate}%</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Click Rate</span>
-                        <div className="font-semibold text-blue-400">{campaign.clickRate}%</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Reply Rate</span>
-                        <div className="font-semibold text-purple-400">{campaign.replyRate}%</div>
+                {data.campaignPerformance.length > 0 ? (
+                  data.campaignPerformance.map((campaign, index) => (
+                    <div key={index} className="border-b border-zinc-800 last:border-0 pb-3 last:pb-0">
+                      <h4 className="font-medium text-white text-sm mb-2">{campaign.name}</h4>
+                      <div className="grid grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <span className="text-gray-500">Open Rate</span>
+                          <div className="font-semibold text-green-400">{campaign.openRate}%</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Click Rate</span>
+                          <div className="font-semibold text-blue-400">{campaign.clickRate}%</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Reply Rate</span>
+                          <div className="font-semibold text-purple-400">{campaign.replyRate}%</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No campaign data available yet.</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -169,30 +180,34 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {data.recentActivity.map((activity, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start space-x-3 border-b border-zinc-800 last:border-0 pb-3 last:pb-0"
-                  >
+                {data.recentActivity.length > 0 ? (
+                  data.recentActivity.map((activity, index) => (
                     <div
-                      className={`w-2 h-2 mt-1.5 rounded-full ${
-                        activity.type === "email_sent"
-                          ? "bg-green-500"
-                          : activity.type === "reply_received"
-                            ? "bg-blue-500"
-                            : activity.type === "prospect_added"
-                              ? "bg-purple-500"
-                              : "bg-gray-500"
-                      }`}
-                    ></div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-300">{activity.description}</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </p>
+                      key={index}
+                      className="flex items-start space-x-3 border-b border-zinc-800 last:border-0 pb-3 last:pb-0"
+                    >
+                      <div
+                        className={`w-2 h-2 mt-1.5 rounded-full ${
+                          activity.type === "email_sent"
+                            ? "bg-green-500"
+                            : activity.type === "reply_received"
+                              ? "bg-blue-500"
+                              : activity.type === "prospect_added"
+                                ? "bg-purple-500"
+                                : "bg-gray-500"
+                        }`}
+                      ></div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-300">{activity.description}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          {new Date(activity.timestamp).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No recent activity yet.</p>
+                )}
               </div>
             </CardContent>
           </Card>
