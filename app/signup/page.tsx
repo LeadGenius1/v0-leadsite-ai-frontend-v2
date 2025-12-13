@@ -17,7 +17,7 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch("https://api.leadsite.ai/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -25,8 +25,8 @@ export default function SignupPage() {
         body: JSON.stringify({
           email,
           password,
-          company_name: companyName,
-          website_url: websiteUrl,
+          company: companyName,
+          website: websiteUrl,
         }),
       })
 
@@ -37,8 +37,8 @@ export default function SignupPage() {
       }
 
       // Store session token
-      if (data.session_token) {
-        localStorage.setItem("session_token", data.session_token)
+      if (data.token) {
+        localStorage.setItem("session_token", data.token)
       }
 
       // Redirect to dashboard
@@ -136,58 +136,4 @@ export default function SignupPage() {
                   required
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Your Company Inc."
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="website_url" className="block text-sm font-medium text-gray-700">
-                Website URL
-              </label>
-              <div className="mt-1">
-                <input
-                  id="website_url"
-                  name="website_url"
-                  type="url"
-                  autoComplete="url"
-                  required
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                  placeholder="https://yourcompany.com"
-                />
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "Creating Account..." : "Create Account"}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-            </div>
-
-            <div className="mt-6 text-center text-sm">
-              <span className="text-gray-600">Already have an account? </span>
-              <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-                Sign in
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:te
