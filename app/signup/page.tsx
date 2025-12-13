@@ -1,27 +1,26 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, type FormEvent } from "react"
+import Link from "next/link"
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [companyName, setCompanyName] = useState("")
+  const [websiteUrl, setWebsiteUrl] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
 
     try {
-      // Call backend API (NOT n8n directly)
-      const response = await fetch('https://api.leadsite.ai/auth/signup', {
-        method: 'POST',
+      const response = await fetch("https://api.leadsite.ai/auth/signup", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email,
@@ -29,131 +28,166 @@ export default function SignupPage() {
           company_name: companyName,
           website_url: websiteUrl,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create account');
+        throw new Error(data.message || "Failed to create account")
       }
 
       // Store session token
-      localStorage.setItem('session_token', data.session_token);
-      
+      if (data.session_token) {
+        localStorage.setItem("session_token", data.session_token)
+      }
+
       // Redirect to dashboard
-      window.location.href = '/dashboard';
-      
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      window.location.href = "/dashboard"
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create Your LeadSite.AI Account
-          </h2>
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-blue-600" />
+            <span className="text-2xl font-bold text-gray-900">LeadSite.AI</span>
+          </div>
         </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Create your account</h2>
+        <p className="mt-2 text-center text-sm text-gray-600">Start generating leads with AI-powered automation</p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           {error && (
-            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-              {error}
+            <div className="mb-4 rounded-md bg-red-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="rounded-md shadow-sm space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+                Email address
               </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="you@company.com"
-              />
+              <div className="mt-1">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  placeholder="you@company.com"
+                />
+              </div>
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="••••••••"
-              />
+              <div className="mt-1">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="company_name" className="block text-sm font-medium text-gray-700">
                 Company Name
               </label>
-              <input
-                id="companyName"
-                name="companyName"
-                type="text"
-                required
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Acme Corp"
-              />
+              <div className="mt-1">
+                <input
+                  id="company_name"
+                  name="company_name"
+                  type="text"
+                  autoComplete="organization"
+                  required
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  placeholder="Your Company Inc."
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="website_url" className="block text-sm font-medium text-gray-700">
                 Website URL
               </label>
-              <input
-                id="websiteUrl"
-                name="websiteUrl"
-                type="url"
-                required
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="https://yourwebsite.com"
-              />
+              <div className="mt-1">
+                <input
+                  id="website_url"
+                  name="website_url"
+                  type="url"
+                  autoComplete="url"
+                  required
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  placeholder="https://yourcompany.com"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
-          </div>
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Creating Account..." : "Create Account"}
+              </button>
+            </div>
+          </form>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+            </div>
+
+            <div className="mt-6 text-center text-sm">
+              <span className="text-gray-600">Already have an account? </span>
               <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
                 Sign in
               </Link>
-            </p>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
-  );
+  )
 }
