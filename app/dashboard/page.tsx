@@ -1,250 +1,139 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
-import { api, type DashboardOverview } from "@/lib/api"
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Mail, MessageSquare, Target, TrendingUp } from "lucide-react"
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardOverview | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState({
+    totalProspects: 0,
+    totalEmails: 0,
+    totalReplies: 0,
+    activeCampaigns: 0
+  });
+  const [prospects, setProspects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchDashboard() {
-      try {
-        setLoading(true)
-        const overview = await api.getDashboardOverview()
+    fetchDashboardData();
+  }, []);
 
-        const safeData = {
-          ...overview,
-          campaignPerformance: overview.campaignPerformance || [],
-          recentActivity: overview.recentActivity || [],
-        }
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch overview stats
+      const overviewRes = await fetch('https://api.leadsite.ai/api/dashboard/overview');
+      const overviewData = await overviewRes.json();
+      setStats(overviewData);
 
-        setData(safeData)
-        setError(null)
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err)
-        setError("Failed to load dashboard data. Please try again.")
-      } finally {
-        setLoading(false)
+      // Fetch prospects
+      const prospectsRes = await fetch('https://api.leadsite.ai/api/prospects');
+      const prospectsData = await prospectsRes.json();
+      setProspects(prospectsData.prospects || []);
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      setLoading(false);
+    }
+  };
+
+  const triggerWorkflow = async (workflowType) => {
+    if (workflowType === 'analyze') {
+      const websiteUrl = prompt('Enter website URL to analyze:');
+      if (websiteUrl) {
+        await fetch('https://n8n.srv1122252.hstgr.cloud/webhook/analyze-business', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerId: 1,
+            websiteUrl: websiteUrl,
+            industry: 'Technology',
+            targetAudience: 'B2B Companies'
+          })
+        });
+        alert('Analysis started! Check back in a few minutes.');
+        setTimeout(fetchDashboardData, 5000);
       }
     }
+  };
 
-    fetchDashboard()
-
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchDashboard, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading dashboard...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="text-center max-w-md">
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
-              <p className="text-red-300 mb-4">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  if (!data) {
-    return null
-  }
+  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading...</div>;
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-1">Welcome to your LeadSite.AI dashboard</p>
+    <div style={{ padding: '30px' }}>
+      <h1 style={{ fontSize: '32px', marginBottom: '30px' }}>LeadSite.AI Dashboard</h1>
+      
+      {/* Stats Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
+        <div style={{ padding: '20px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
+          <h3>Total Prospects</h3>
+          <p style={{ fontSize: '36px', fontWeight: 'bold' }}>{stats.totalProspects}</p>
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="bg-zinc-900/50 border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-gray-400">Total Prospects</CardTitle>
-              <Users className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-white">{data.totalProspects.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-gray-400">Emails Sent</CardTitle>
-              <Mail className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-white">{data.totalEmails.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-gray-400">Replies</CardTitle>
-              <MessageSquare className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-white">{data.totalReplies.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-gray-400">Active Campaigns</CardTitle>
-              <Target className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-white">{data.activeCampaigns}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-gray-400">Conversion Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-pink-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-white">{data.conversionRate}%</div>
-            </CardContent>
-          </Card>
+        <div style={{ padding: '20px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
+          <h3>Emails Sent</h3>
+          <p style={{ fontSize: '36px', fontWeight: 'bold' }}>{stats.totalEmails}</p>
         </div>
-
-        {/* Campaign Performance & Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="bg-zinc-900/50 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-sm text-white">Campaign Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {data.campaignPerformance.length > 0 ? (
-                  data.campaignPerformance.map((campaign, index) => (
-                    <div key={index} className="border-b border-zinc-800 last:border-0 pb-3 last:pb-0">
-                      <h4 className="font-medium text-white text-sm mb-2">{campaign.name}</h4>
-                      <div className="grid grid-cols-3 gap-3 text-xs">
-                        <div>
-                          <span className="text-gray-500">Open Rate</span>
-                          <div className="font-semibold text-green-400">{campaign.openRate}%</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Click Rate</span>
-                          <div className="font-semibold text-blue-400">{campaign.clickRate}%</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Reply Rate</span>
-                          <div className="font-semibold text-purple-400">{campaign.replyRate}%</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-sm">No campaign data available yet.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900/50 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-sm text-white">Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {data.recentActivity.length > 0 ? (
-                  data.recentActivity.map((activity, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start space-x-3 border-b border-zinc-800 last:border-0 pb-3 last:pb-0"
-                    >
-                      <div
-                        className={`w-2 h-2 mt-1.5 rounded-full ${
-                          activity.type === "email_sent"
-                            ? "bg-green-500"
-                            : activity.type === "reply_received"
-                              ? "bg-blue-500"
-                              : activity.type === "prospect_added"
-                                ? "bg-purple-500"
-                                : "bg-gray-500"
-                        }`}
-                      ></div>
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-300">{activity.description}</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">
-                          {new Date(activity.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-sm">No recent activity yet.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        <div style={{ padding: '20px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
+          <h3>Replies</h3>
+          <p style={{ fontSize: '36px', fontWeight: 'bold' }}>{stats.totalReplies}</p>
         </div>
-
-        {/* Quick Actions */}
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-sm text-white">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <a
-                href="/dashboard/clients"
-                className="flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                View Prospects
-              </a>
-              <a
-                href="/dashboard/emails"
-                className="flex items-center justify-center px-3 py-2 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 transition"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                View Emails
-              </a>
-              <a
-                href="/settings"
-                className="flex items-center justify-center px-3 py-2 bg-zinc-700 text-white text-xs rounded-lg hover:bg-zinc-600 transition"
-              >
-                <Target className="h-4 w-4 mr-2" />
-                Settings
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+        <div style={{ padding: '20px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
+          <h3>Active Campaigns</h3>
+          <p style={{ fontSize: '36px', fontWeight: 'bold' }}>{stats.activeCampaigns}</p>
+        </div>
       </div>
-    </DashboardLayout>
-  )
+
+      {/* Action Buttons */}
+      <div style={{ marginBottom: '40px' }}>
+        <h2>Quick Actions</h2>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button 
+            onClick={() => triggerWorkflow('analyze')}
+            style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+          >
+            Analyze New Business
+          </button>
+          <button 
+            onClick={fetchDashboardData}
+            style={{ padding: '10px 20px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+          >
+            Refresh Data
+          </button>
+        </div>
+      </div>
+
+      {/* Prospects Table */}
+      <div>
+        <h2>Recent Prospects</h2>
+        <table style={{ width: '100%', marginTop: '20px', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+              <th style={{ padding: '10px', textAlign: 'left' }}>Name</th>
+              <th style={{ padding: '10px', textAlign: 'left' }}>Email</th>
+              <th style={{ padding: '10px', textAlign: 'left' }}>Company</th>
+              <th style={{ padding: '10px', textAlign: 'left' }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {prospects.map((prospect) => (
+              <tr key={prospect.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '10px' }}>{prospect.name || 'N/A'}</td>
+                <td style={{ padding: '10px' }}>{prospect.email || 'N/A'}</td>
+                <td style={{ padding: '10px' }}>{prospect.company || prospect.industry}</td>
+                <td style={{ padding: '10px' }}>
+                  <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: prospect.status === 'active' ? '#10b981' : '#6b7280',
+                    color: 'white',
+                    fontSize: '12px'
+                  }}>
+                    {prospect.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
