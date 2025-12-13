@@ -1,239 +1,158 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function SignupPage() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    company: '',
-    website: ''
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
-      const response = await fetch('https://api.leadsite.ai/api/auth/signup', {
+      // Call backend API (NOT n8n directly)
+      const response = await fetch('https://api.leadsite.ai/auth/signup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          company_name: companyName,
+          website_url: websiteUrl,
+        }),
       });
-      
+
       const data = await response.json();
-      
-      if (response.ok && data.token) {
-        // Store the session token
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('user_email', data.user.email);
-        localStorage.setItem('user_company', data.user.company_name);
-        
-        // Redirect to dashboard
-        window.location.href = '/dashboard';
-      } else {
-        setError(data.error || 'Signup failed');
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create account');
       }
-    } catch (error) {
-      setError('Connection error. Please try again.');
+
+      // Store session token
+      localStorage.setItem('session_token', data.session_token);
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
+      
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      backgroundColor: '#f3f4f6' 
-    }}>
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '40px', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)', 
-        width: '100%',
-        maxWidth: '400px' 
-      }}>
-        <h2 style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          marginBottom: '24px', 
-          textAlign: 'center',
-          color: '#111827'
-        }}>
-          Create Your LeadSite.AI Account
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Create Your LeadSite.AI Account
+          </h2>
+        </div>
         
-        {error && (
-          <div style={{ 
-            padding: '10px', 
-            backgroundColor: '#fee2e2', 
-            color: '#dc2626', 
-            borderRadius: '6px', 
-            marginBottom: '16px',
-            fontSize: '14px'
-          }}>
-            {error}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+              {error}
+            </div>
+          )}
+
+          <div className="rounded-md shadow-sm space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="you@company.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
+                Company Name
+              </label>
+              <input
+                id="companyName"
+                name="companyName"
+                type="text"
+                required
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Acme Corp"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700">
+                Website URL
+              </label>
+              <input
+                id="websiteUrl"
+                name="websiteUrl"
+                type="url"
+                required
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="https://yourwebsite.com"
+              />
+            </div>
           </div>
-        )}
-        
-        <form onSubmit={handleSignup}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '4px', 
-              fontSize: '14px', 
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                border: '1px solid #d1d5db', 
-                borderRadius: '6px',
-                color: '#000000',
-                backgroundColor: '#ffffff',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="your@email.com"
-              required
+
+          <div>
+            <button
+              type="submit"
               disabled={loading}
-            />
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </button>
           </div>
-          
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '4px', 
-              fontSize: '14px', 
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                border: '1px solid #d1d5db', 
-                borderRadius: '6px',
-                color: '#000000',
-                backgroundColor: '#ffffff',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="••••••••"
-              required
-              disabled={loading}
-            />
+
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{' '}
+              <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+                Sign in
+              </Link>
+            </p>
           </div>
-          
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '4px', 
-              fontSize: '14px', 
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Company Name
-            </label>
-            <input
-              type="text"
-              value={formData.company}
-              onChange={(e) => setFormData({...formData, company: e.target.value})}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                border: '1px solid #d1d5db', 
-                borderRadius: '6px',
-                color: '#000000',
-                backgroundColor: '#ffffff',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="Your Company Inc."
-              required
-              disabled={loading}
-            />
-          </div>
-          
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '4px', 
-              fontSize: '14px', 
-              fontWeight: '500',
-              color: '#374151'
-            }}>
-              Website URL
-            </label>
-            <input
-              type="url"
-              value={formData.website}
-              onChange={(e) => setFormData({...formData, website: e.target.value})}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                border: '1px solid #d1d5db', 
-                borderRadius: '6px',
-                color: '#000000',
-                backgroundColor: '#ffffff',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-              placeholder="https://example.com"
-              required
-              disabled={loading}
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{ 
-              width: '100%', 
-              padding: '12px', 
-              backgroundColor: loading ? '#9ca3af' : '#6366f1', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '6px', 
-              fontSize: '16px', 
-              fontWeight: '500', 
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Creating Account...' : 'Create Account'}
-          </button>
         </form>
-        
-        <p style={{ 
-          marginTop: '16px', 
-          textAlign: 'center', 
-          color: '#6b7280',
-          fontSize: '14px'
-        }}>
-          Already have an account?{' '}
-          <a href="/login" style={{ color: '#6366f1', textDecoration: 'none', fontWeight: '500' }}>
-            Sign in
-          </a>
-        </p>
       </div>
     </div>
   );
