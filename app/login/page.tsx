@@ -2,14 +2,14 @@
 
 import { useState, type FormEvent } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
-export default function SignupPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [companyName, setCompanyName] = useState("")
-  const [websiteUrl, setWebsiteUrl] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const router = useRouter()
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -17,23 +17,18 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          password,
-          company_name: companyName,
-          website_url: websiteUrl,
-        }),
+        body: JSON.stringify({ email, password }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to create account")
+        throw new Error(data.message || "Failed to log in")
       }
 
       // Store session token
@@ -42,7 +37,7 @@ export default function SignupPage() {
       }
 
       // Redirect to dashboard
-      window.location.href = "/dashboard"
+      router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
     } finally {
@@ -59,8 +54,8 @@ export default function SignupPage() {
             <span className="text-2xl font-bold text-gray-900">LeadSite.AI</span>
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Create your account</h2>
-        <p className="mt-2 text-center text-sm text-gray-600">Start generating leads with AI-powered automation</p>
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
+        <p className="mt-2 text-center text-sm text-gray-600">Access your lead generation dashboard</p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -113,7 +108,7 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -123,41 +118,23 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="company_name" className="block text-sm font-medium text-gray-700">
-                Company Name
-              </label>
-              <div className="mt-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
                 <input
-                  id="company_name"
-                  name="company_name"
-                  type="text"
-                  autoComplete="organization"
-                  required
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Your Company Inc."
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="website_url" className="block text-sm font-medium text-gray-700">
-                Website URL
-              </label>
-              <div className="mt-1">
-                <input
-                  id="website_url"
-                  name="website_url"
-                  type="url"
-                  autoComplete="url"
-                  required
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                  placeholder="https://yourcompany.com"
-                />
+              <div className="text-sm">
+                <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
+                  Forgot password?
+                </a>
               </div>
             </div>
 
@@ -167,7 +144,7 @@ export default function SignupPage() {
                 disabled={isLoading}
                 className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Creating Account..." : "Create Account"}
+                {isLoading ? "Signing in..." : "Sign in"}
               </button>
             </div>
           </form>
@@ -180,9 +157,9 @@ export default function SignupPage() {
             </div>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-gray-600">Already have an account? </span>
-              <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-                Sign in
+              <span className="text-gray-600">Don't have an account? </span>
+              <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+                Sign up
               </Link>
             </div>
           </div>
