@@ -117,6 +117,19 @@ export interface CampaignsResponse {
 }
 
 /**
+ * Business Types
+ */
+export interface Business {
+  id: string
+  name: string
+  website: string
+  industry: string
+  description?: string
+  status: string
+  created_at: string
+}
+
+/**
  * n8n Workflow Types
  */
 export interface N8nWorkflow {
@@ -193,10 +206,186 @@ export const api = {
   },
 
   /**
+   * Get single business by ID
+   */
+  getBusiness: async (id: string, token: string): Promise<Business> => {
+    return apiFetch(`/api/businesses/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  },
+
+  /**
+   * Update business
+   */
+  updateBusiness: async (
+    id: string,
+    data: { name: string; website: string; industry: string; description?: string },
+    token: string,
+  ): Promise<Business> => {
+    return apiFetch(`/api/businesses/${id}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Delete business
+   */
+  deleteBusiness: async (id: string, token: string): Promise<{ success: boolean }> => {
+    return apiFetch(`/api/businesses/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  },
+
+  /**
+   * Create campaign
+   */
+  createCampaign: async (data: { name: string; business_id: string }, token: string): Promise<Campaign> => {
+    return apiFetch("/api/campaigns", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Get prospects for a business
+   */
+  getProspectsByBusiness: async (businessId: string, token: string): Promise<ProspectsResponse> => {
+    return apiFetch(`/api/prospects?business_id=${businessId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  },
+
+  /**
    * Get n8n status
    */
   getN8nStatus: async (): Promise<N8nStatusResponse> => {
     return apiFetch("/api/n8n/status")
+  },
+
+  /**
+   * Get user dashboard data (email, plan_tier, trial_ends_at)
+   */
+  getUserDashboard: async (
+    token: string,
+  ): Promise<{
+    customerId: string
+    email: string
+    plan_tier: string
+    trial_ends_at: string
+    created_at: string
+  }> => {
+    return apiFetch("/api/dashboard", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  },
+
+  /**
+   * Get businesses for a customer
+   */
+  getBusinesses: async (
+    customerId: string,
+    token: string,
+  ): Promise<{
+    businesses: Array<{
+      id: string
+      customer_id: string
+      name: string
+      industry: string
+      url: string
+      analysis_status: string
+      created_at: string
+    }>
+  }> => {
+    return apiFetch(`/api/businesses?customer_id=${customerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  },
+
+  /**
+   * Create new business
+   */
+  createBusiness: async (
+    data: { customer_id: string; name: string; industry: string; url: string },
+    token: string,
+  ): Promise<{
+    success: boolean
+    businessId: string
+    message: string
+  }> => {
+    return apiFetch("/api/businesses/create", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Get campaigns for a customer
+   */
+  getCampaignsByCustomer: async (
+    customerId: string,
+    token: string,
+  ): Promise<{
+    campaigns: Array<{
+      id: string
+      business_id: string
+      name: string
+      status: string
+      created_at: string
+    }>
+  }> => {
+    return apiFetch(`/api/campaigns?customer_id=${customerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  },
+
+  /**
+   * Trigger N8N workflow
+   */
+  triggerWorkflow: async (
+    data: {
+      customer_id: string
+      business_id: string
+      workflow_type: "analyze_business" | "discover_prospects" | "generate_emails"
+    },
+    token: string,
+  ): Promise<{
+    received: boolean
+    status: string
+  }> => {
+    return apiFetch("/api/workflows/trigger", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Get prospects for a business
+   */
+  getProspectsForBusiness: async (
+    businessId: string,
+    token: string,
+  ): Promise<{
+    prospects: Array<{
+      id: number
+      customer_id: string
+      business_id: string
+      company_name: string
+      contact_name: string
+      contact_email: string
+      industry: string
+      status: string
+      source: string
+    }>
+  }> => {
+    return apiFetch(`/api/prospects?business_id=${businessId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
   },
 }
 

@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 export function CTA() {
@@ -40,12 +39,76 @@ export function CTA() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-gray-500 text-xs h-9 sm:h-10"
               />
-              <Button
-                type="submit"
-                className="bg-white text-gray-900 hover:bg-gray-100 font-medium text-xs h-9 sm:h-10 px-5"
-              >
-                Start Free Trial
-              </Button>
+              <style jsx>{`
+                @property --gradient-angle {
+                  syntax: "<angle>";
+                  initial-value: 0deg;
+                  inherits: false;
+                }
+
+                .shiny-cta {
+                  --gradient-angle: 0deg;
+                  position: relative;
+                  overflow: hidden;
+                  border-radius: 9999px;
+                  padding: 0.5rem 1.25rem;
+                  font-size: 0.75rem;
+                  line-height: 1.2;
+                  font-weight: 500;
+                  color: #ffffff;
+                  background: linear-gradient(#000000, #000000) padding-box,
+                    conic-gradient(from var(--gradient-angle), transparent 0%, #1d4ed8 5%, #8484ff 15%, #1d4ed8 30%, transparent 40%)
+                      border-box;
+                  border: 2px solid transparent;
+                  box-shadow: inset 0 0 0 1px #1a1818;
+                  cursor: pointer;
+                  font-family: "Inter", "Helvetica Neue", sans-serif;
+                  animation: border-spin 2.5s linear infinite;
+                  white-space: nowrap;
+                }
+
+                @keyframes border-spin {
+                  to {
+                    --gradient-angle: 360deg;
+                  }
+                }
+
+                .shiny-cta::after {
+                  content: "";
+                  position: absolute;
+                  left: 50%;
+                  top: 50%;
+                  transform: translate(-50%, -50%);
+                  width: 100%;
+                  aspect-ratio: 1;
+                  background: linear-gradient(-50deg, transparent, #1d4ed8, transparent);
+                  mask-image: radial-gradient(circle at bottom, transparent 40%, black);
+                  opacity: 0.6;
+                  animation: shimmer 4s linear infinite;
+                  pointer-events: none;
+                }
+
+                .shiny-cta span {
+                  position: relative;
+                  z-index: 2;
+                }
+
+                @keyframes shimmer {
+                  to {
+                    transform: translate(-50%, -50%) rotate(360deg);
+                  }
+                }
+
+                @media (min-width: 640px) {
+                  .shiny-cta {
+                    height: 2.5rem;
+                    font-size: 0.875rem;
+                  }
+                }
+              `}</style>
+              <button type="submit" className="shiny-cta focus:outline-none">
+                <span>Start Free Trial</span>
+              </button>
             </form>
 
             <p className="text-[10px] text-gray-500">No credit card required. 14-day free trial for all plans.</p>
