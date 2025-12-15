@@ -101,9 +101,10 @@ export default function DashboardPage() {
 
   const callApi = async (method: string, endpoint: string, body: any = null) => {
     try {
-      const token = localStorage.getItem("sessionToken")
+      const token = localStorage.getItem("token")
       if (!token) {
-        router.push("/")
+        console.log("[Dashboard] No token found, redirecting to login")
+        router.push("/login")
         return null
       }
 
@@ -117,10 +118,10 @@ export default function DashboardPage() {
       })
 
       if (response.status === 401) {
-        console.log("[v0] 401 Unauthorized - redirecting to landing page")
-        localStorage.removeItem("sessionToken")
+        console.log("[Dashboard] 401 Unauthorized - token invalid, redirecting to login")
+        localStorage.removeItem("token")
         localStorage.removeItem("customerId")
-        router.push("/")
+        router.push("/login")
         return null
       }
 
@@ -130,32 +131,29 @@ export default function DashboardPage() {
       }
       return data
     } catch (error: any) {
-      console.error("[v0] API Error:", error)
+      console.error("[Dashboard] API Error:", error)
       throw error
     }
   }
 
   useEffect(() => {
-    const token = localStorage.getItem("sessionToken")
+    const token = localStorage.getItem("token")
+    console.log("[Dashboard] Token check:", token ? "EXISTS" : "MISSING")
+
     if (!token) {
-      router.push("/signup")
+      console.log("[Dashboard] No token, redirecting to login")
+      router.push("/login")
       return
     }
 
     async function checkProfileAndLoadDashboard() {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
       try {
         setLoading(true)
 
         const userData = await callApi("GET", "/api/dashboard")
         if (!userData) return
 
-        console.log("[v0] Dashboard data loaded:", userData)
+        console.log("[Dashboard] Dashboard data loaded:", userData)
         setUser(userData)
         localStorage.setItem("customerId", userData.customerId)
 
@@ -180,14 +178,14 @@ export default function DashboardPage() {
           callApi("GET", `/api/campaigns?customer_id=${userData.customerId}`),
         ])
 
-        console.log("[v0] Businesses:", businessesData)
-        console.log("[v0] Campaigns:", campaignsData)
+        console.log("[Dashboard] Businesses:", businessesData)
+        console.log("[Dashboard] Campaigns:", campaignsData)
 
         setBusinesses(businessesData?.businesses || [])
         setCampaigns(campaignsData?.campaigns || [])
         setError(null)
       } catch (err: any) {
-        console.error("[v0] Dashboard load failed:", err)
+        console.error("[Dashboard] Dashboard load failed:", err)
         setError("Failed to load dashboard data")
       } finally {
         setLoading(false)
@@ -209,11 +207,11 @@ export default function DashboardPage() {
   }, [])
 
   const startPolling = (workflowType: string) => {
-    console.log("[v0] Starting polling for workflow:", workflowType)
+    console.log("[Dashboard] Starting polling for workflow:", workflowType)
     setIsPolling(true)
 
     pollingTimeoutRef.current = setTimeout(() => {
-      console.log("[v0] Polling timeout reached (2 minutes)")
+      console.log("[Dashboard] Polling timeout reached (2 minutes)")
       stopPolling()
       setError("Workflow is taking longer than expected. Please check back later.")
     }, 120000) // 2 minutes
@@ -226,14 +224,14 @@ export default function DashboardPage() {
         // Poll businesses for status updates
         const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
         if (businessesData?.businesses) {
-          console.log("[v0] Polling - businesses updated:", businessesData.businesses)
+          console.log("[Dashboard] Polling - businesses updated:", businessesData.businesses)
           setBusinesses(businessesData.businesses)
 
           // Check if workflow completed
           const selectedBusiness = businessesData.businesses.find((b: Business) => b.id === selectedBusinessId)
           if (selectedBusiness) {
             if (workflowType === "analyze_business" && selectedBusiness.analysis_status === "completed") {
-              console.log("[v0] Analysis completed!")
+              console.log("[Dashboard] Analysis completed!")
               stopPolling()
               setWorkflowStatus({
                 type: "analyze_business",
@@ -248,13 +246,13 @@ export default function DashboardPage() {
         if (workflowType === "discover_prospects" || workflowType === "generate_emails") {
           const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${customerId}`)
           if (campaignsData?.campaigns) {
-            console.log("[v0] Polling - campaigns updated:", campaignsData.campaigns)
+            console.log("[Dashboard] Polling - campaigns updated:", campaignsData.campaigns)
             setCampaigns(campaignsData.campaigns)
 
             const latestCampaign = campaignsData.campaigns[0]
             if (latestCampaign) {
               if (workflowType === "discover_prospects" && latestCampaign.status === "prospects_found") {
-                console.log("[v0] Prospects discovered!")
+                console.log("[Dashboard] Prospects discovered!")
                 stopPolling()
                 setWorkflowStatus({
                   type: "discover_prospects",
@@ -266,7 +264,7 @@ export default function DashboardPage() {
                   loadProspects(selectedBusinessId)
                 }
               } else if (workflowType === "generate_emails" && latestCampaign.status === "sent") {
-                console.log("[v0] Emails sent!")
+                console.log("[Dashboard] Emails sent!")
                 stopPolling()
                 setWorkflowStatus({
                   type: "generate_emails",
@@ -278,13 +276,13 @@ export default function DashboardPage() {
           }
         }
       } catch (error) {
-        console.error("[v0] Polling error:", error)
+        console.error("[Dashboard] Polling error:", error)
       }
     }, 2000) // Poll every 2 seconds
   }
 
   const stopPolling = () => {
-    console.log("[v0] Stopping polling")
+    console.log("[Dashboard] Stopping polling")
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
       pollingIntervalRef.current = null
@@ -313,7 +311,7 @@ export default function DashboardPage() {
     }
 
     try {
-      console.log("[v0] Triggering workflow:", workflowType, "for business:", selectedBusinessId)
+      console.log("[Dashboard] Triggering workflow:", workflowType, "for business:", selectedBusinessId)
 
       setWorkflowStatus({
         type: workflowType,
@@ -325,11 +323,11 @@ export default function DashboardPage() {
       if (workflowType === "analyze_business") {
         // Trigger business analysis
         await callApi("POST", `/api/businesses/${selectedBusinessId}/analyze`, {})
-        console.log("[v0] Business analysis triggered")
+        console.log("[Dashboard] Business analysis triggered")
         startPolling(workflowType)
       } else if (workflowType === "discover_prospects") {
         // Step 1: Create campaign first
-        console.log("[v0] Creating campaign first...")
+        console.log("[Dashboard] Creating campaign first...")
         const campaignData = await callApi("POST", "/api/campaigns", {
           name: `Campaign ${new Date().toLocaleDateString()}`,
           business_id: selectedBusinessId,
@@ -340,11 +338,11 @@ export default function DashboardPage() {
           throw new Error("Failed to create campaign")
         }
 
-        console.log("[v0] Campaign created:", campaignData.id)
+        console.log("[Dashboard] Campaign created:", campaignData.id)
 
         // Step 2: Trigger discover prospects on the new campaign
         await callApi("POST", `/api/campaigns/${campaignData.id}/discover-prospects`, {})
-        console.log("[v0] Prospect discovery triggered")
+        console.log("[Dashboard] Prospect discovery triggered")
 
         // Reload campaigns to show the new one
         const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${customerId}`)
@@ -363,11 +361,11 @@ export default function DashboardPage() {
 
         // Trigger email send
         await callApi("POST", `/api/campaigns/${latestCampaign.id}/send`, {})
-        console.log("[v0] Email send triggered")
+        console.log("[Dashboard] Email send triggered")
         startPolling(workflowType)
       }
     } catch (err: any) {
-      console.error("[v0] Workflow trigger failed:", err)
+      console.error("[Dashboard] Workflow trigger failed:", err)
       setWorkflowStatus({
         type: workflowType,
         status: "error",
@@ -397,12 +395,12 @@ export default function DashboardPage() {
 
   const loadProspects = async (businessId: string) => {
     try {
-      console.log("[v0] Loading prospects for business:", businessId)
+      console.log("[Dashboard] Loading prospects for business:", businessId)
       const data = await callApi("GET", `/api/prospects?business_id=${businessId}`)
-      console.log("[v0] Prospects loaded:", data)
+      console.log("[Dashboard] Prospects loaded:", data)
       setProspects(data?.prospects || [])
     } catch (error) {
-      console.error("[v0] Failed to load prospects:", error)
+      console.error("[Dashboard] Failed to load prospects:", error)
       setError("Failed to load prospects")
     }
   }
@@ -426,7 +424,7 @@ export default function DashboardPage() {
     setError(null)
 
     try {
-      console.log("[v0] Creating business:", { customerId, businessForm })
+      console.log("[Dashboard] Creating business:", { customerId, businessForm })
 
       await callApi("POST", "/api/businesses", {
         customer_id: Number.parseInt(customerId),
@@ -435,7 +433,7 @@ export default function DashboardPage() {
         url: businessForm.url,
       })
 
-      console.log("[v0] Business created successfully")
+      console.log("[Dashboard] Business created successfully")
 
       // Reload businesses
       const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
@@ -456,7 +454,7 @@ export default function DashboardPage() {
         setWorkflowStatus(null)
       }, 3000)
     } catch (err: any) {
-      console.error("[v0] Error creating business:", err)
+      console.error("[Dashboard] Error creating business:", err)
       setError(err.message || "Failed to create business")
     } finally {
       setFormLoading(false)
@@ -469,7 +467,7 @@ export default function DashboardPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("sessionToken")
+    localStorage.removeItem("token")
     localStorage.removeItem("customerId")
     router.push("/")
   }

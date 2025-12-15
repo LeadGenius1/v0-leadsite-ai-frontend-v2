@@ -258,6 +258,7 @@ export default function OnboardingPage() {
 
       console.log("[v0] ✓ Profile saved successfully")
       console.log("[v0] ✓ N8N should now be processing this data")
+      console.log("[v0] Token still valid:", !!localStorage.getItem("token"))
       console.log("[v0] === PROFILE SUBMISSION END ===")
 
       router.push("/dashboard")
