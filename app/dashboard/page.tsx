@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -96,6 +98,7 @@ export default function DashboardPage() {
 
   const [isPolling, setIsPolling] = useState(false)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const callApi = async (method: string, endpoint: string, body: any = null) => {
     try {
@@ -184,12 +187,21 @@ export default function DashboardPage() {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
       }
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current)
+      }
     }
   }, [])
 
   const startPolling = (workflowType: string) => {
     console.log("[v0] Starting polling for workflow:", workflowType)
     setIsPolling(true)
+
+    pollingTimeoutRef.current = setTimeout(() => {
+      console.log("[v0] Polling timeout reached (2 minutes)")
+      stopPolling()
+      setError("Workflow is taking longer than expected. Please check back later.")
+    }, 120000) // 2 minutes
 
     pollingIntervalRef.current = setInterval(async () => {
       try {
@@ -261,6 +273,10 @@ export default function DashboardPage() {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
       pollingIntervalRef.current = null
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current)
+      pollingTimeoutRef.current = null
     }
     setIsPolling(false)
 
@@ -376,39 +392,37 @@ export default function DashboardPage() {
     }
   }
 
-  const handleCreateBusiness = async () => {
-    if (!businessForm.name || !businessForm.industry || !businessForm.url) {
-      setError("Please fill in all fields")
-      return
-    }
-
+  const handleCreateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault()
     const customerId = localStorage.getItem("customerId")
-    if (!customerId) {
-      setError("Customer ID not found")
-      return
-    }
+    if (!customerId) return
+
+    setFormLoading(true)
+    setError(null)
 
     try {
-      setFormLoading(true)
-
-      const result = await callApi("POST", "/api/businesses/create", {
+      await callApi("POST", "/api/businesses/create", {
         customer_id: customerId,
         name: businessForm.name,
         industry: businessForm.industry,
         url: businessForm.url,
       })
 
-      console.log("[v0] Business created:", result)
-
       // Reload businesses
       const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
       setBusinesses(businessesData?.businesses || [])
 
-      setShowCreateBusiness(false)
+      // Reset form and close modal
       setBusinessForm({ name: "", industry: "", url: "" })
-      setError(null)
+      setShowCreateBusiness(false)
+
+      setWorkflowStatus({
+        type: "create_business",
+        status: "complete",
+        message: "Business added successfully!",
+      })
+      setTimeout(() => setWorkflowStatus(null), 3000)
     } catch (err: any) {
-      console.error("[v0] Failed to create business:", err)
       setError(`Failed to create business: ${err.message}`)
     } finally {
       setFormLoading(false)
