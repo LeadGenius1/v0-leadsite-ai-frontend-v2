@@ -195,10 +195,37 @@ export default function OnboardingPage() {
 
     try {
       const token = localStorage.getItem("token")
+
+      console.log("[v0] === PROFILE SUBMISSION START ===")
+      console.log("[v0] Token exists:", !!token)
+
       if (!token) {
+        console.log("[v0] ERROR: No authentication token found")
         router.push("/login")
         return
       }
+
+      const payload = {
+        business_name: formData.businessName,
+        industry: formData.industry,
+        website: formData.website,
+        description: formData.description || null,
+        owner_name: formData.ownerName,
+        email: formData.email,
+        phone: formData.phone,
+        address: `${formData.street}, ${formData.city}, ${formData.state} ${formData.zip}`,
+        city: formData.city,
+        state: formData.state,
+        zip: formData.zip,
+        target_customer_type: formData.targetCustomerType,
+        target_location: formData.targetLocation,
+        services: formData.services,
+        unique_selling_points: formData.uniqueSellingPoints || null,
+      }
+
+      console.log("[v0] Payload being sent to backend:", JSON.stringify(payload, null, 2))
+      console.log("[v0] API Endpoint:", `${API_BASE_URL}/api/profile`)
+      console.log("[v0] Authorization: Bearer [TOKEN]")
 
       const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: "POST",
@@ -206,33 +233,40 @@ export default function OnboardingPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          business_name: formData.businessName,
-          industry: formData.industry,
-          website: formData.website,
-          description: formData.description || null,
-          owner_name: formData.ownerName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.street,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-          target_customer_type: formData.targetCustomerType,
-          target_location: formData.targetLocation,
-          services: formData.services,
-          unique_selling_points: formData.uniqueSellingPoints || null,
-        }),
+        body: JSON.stringify(payload),
       })
 
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response ok:", response.ok)
+
+      const data = await response.json()
+      console.log("[v0] Response data:", JSON.stringify(data, null, 2))
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || data.message || "Failed to save profile")
+        console.error("[v0] API ERROR:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error || data.message,
+        })
+        throw new Error(data.error || data.message || `Server responded with status ${response.status}`)
       }
 
-      // Success - redirect to dashboard
+      if (!data.success) {
+        console.error("[v0] Business logic error:", data.error)
+        throw new Error(data.error || "Failed to save profile")
+      }
+
+      console.log("[v0] ✓ Profile saved successfully")
+      console.log("[v0] ✓ N8N should now be processing this data")
+      console.log("[v0] === PROFILE SUBMISSION END ===")
+
       router.push("/dashboard")
     } catch (err) {
+      console.error("[v0] SUBMISSION FAILED:", err)
+      console.error("[v0] Error details:", {
+        message: err instanceof Error ? err.message : "Unknown error",
+        stack: err instanceof Error ? err.stack : undefined,
+      })
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
       setIsLoading(false)
     }
