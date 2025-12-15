@@ -14,7 +14,6 @@ import {
   Search,
   Eye,
   Play,
-  Clock,
   CheckCircle2,
   Loader2,
   X,
@@ -82,6 +81,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [trialDaysLeft, setTrialDaysLeft] = useState(0)
+  const [profile, setProfile] = useState<any>(null)
 
   // Modal states
   const [showCreateBusiness, setShowCreateBusiness] = useState(false)
@@ -99,6 +99,12 @@ export default function DashboardPage() {
   const [isPolling, setIsPolling] = useState(false)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (businesses.length === 1 && !selectedBusinessId) {
+      setSelectedBusinessId(businesses[0].id)
+    }
+  }, [businesses, selectedBusinessId])
 
   const callApi = async (method: string, endpoint: string, body: any = null) => {
     try {
@@ -162,6 +168,7 @@ export default function DashboardPage() {
         try {
           profileData = await callApi("GET", "/api/profile")
           console.log("[Dashboard] Profile data loaded:", profileData)
+          setProfile(profileData?.profile)
         } catch (profileErr: any) {
           // If profile doesn't exist (404), redirect to onboarding
           if (profileErr.message.includes("404") || profileErr.message.includes("not found")) {
@@ -522,47 +529,46 @@ export default function DashboardPage() {
 
       {/* Header */}
       <header className="relative border-b border-white/10 bg-black/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-xl font-semibold">Welcome, {user?.email}</h1>
-              <div className="flex items-center gap-4 mt-1">
-                <span className="text-xs text-gray-400">Plan: {user?.plan_tier}</span>
-                {trialDaysLeft > 0 && (
-                  <span className="text-xs text-yellow-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Trial expires in {trialDaysLeft} days
-                  </span>
-                )}
+              <h1 className="text-base sm:text-lg font-semibold">
+                Welcome, {profile?.owner_name || user?.email || ""}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
+                <span className="text-[10px] sm:text-xs text-gray-400">
+                  Plan: {user?.plan_tier || "Free"}
+                  {trialDaysLeft > 0 && ` (${trialDaysLeft} days left)`}
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={() => router.push("/pricing")}
-                className="px-4 py-2 bg-indigo-500/10 text-indigo-400 rounded-lg text-sm hover:bg-indigo-500/20 transition"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-500/10 text-indigo-400 rounded-lg text-xs sm:text-sm hover:bg-indigo-500/20 transition"
               >
                 Upgrade Plan
               </button>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg text-sm hover:bg-red-500/20 transition"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500/10 text-red-400 rounded-lg text-xs sm:text-sm hover:bg-red-500/20 transition"
               >
-                <LogOut className="w-4 h-4" />
-                Logout
+                <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* System status */}
         <div className="flex items-center gap-2">
           <div className="relative">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-ping absolute"></div>
-            <div className="w-2 h-2 bg-green-500 rounded-full relative"></div>
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-ping absolute"></div>
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full relative"></div>
           </div>
-          <span className="text-xs text-green-400 font-medium">SYSTEM ONLINE</span>
+          <span className="text-[10px] sm:text-xs text-green-400 font-medium">SYSTEM ONLINE</span>
         </div>
 
         {error && (
@@ -593,45 +599,44 @@ export default function DashboardPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-neutral-900/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-indigo-400" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400" />
               </div>
             </div>
-            <div className="text-3xl font-bold mb-1">{businesses.length}</div>
-            <div className="text-sm text-gray-400">Businesses</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1">{businesses.length}</div>
+            <div className="text-xs sm:text-sm text-gray-400">Businesses</div>
           </div>
 
-          <div className="bg-neutral-900/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                <Target className="w-6 h-6 text-purple-400" />
+          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
               </div>
             </div>
-            <div className="text-3xl font-bold mb-1">{prospects.length}</div>
-            <div className="text-sm text-gray-400">Prospects Discovered</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1">{prospects.length}</div>
+            <div className="text-xs sm:text-sm text-gray-400">Prospects Discovered</div>
           </div>
 
-          <div className="bg-neutral-900/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                <Mail className="w-6 h-6 text-cyan-400" />
+          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
               </div>
             </div>
-            <div className="text-3xl font-bold mb-1">{campaigns.length}</div>
-            <div className="text-sm text-gray-400">Active Campaigns</div>
+            <div className="text-2xl sm:text-3xl font-bold mb-1">{campaigns.length}</div>
+            <div className="text-xs sm:text-sm text-gray-400">Active Campaigns</div>
           </div>
         </div>
 
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Businesses list */}
-          <div className="lg:col-span-2 bg-neutral-900/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Your Businesses</h2>
-              {/* Note: "Add Client Business" will be a premium feature in the future */}
+          <div className="lg:col-span-2 bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-base sm:text-lg font-semibold">Your Businesses</h2>
             </div>
 
             {businesses.length > 0 ? (
@@ -639,30 +644,30 @@ export default function DashboardPage() {
                 {businesses.map((business) => (
                   <div
                     key={business.id}
-                    className={`border rounded-xl p-4 cursor-pointer transition ${
+                    className={`border rounded-lg sm:rounded-xl p-3 sm:p-4 cursor-pointer transition ${
                       selectedBusinessId === business.id
                         ? "border-indigo-500 bg-indigo-500/5"
                         : "border-white/10 hover:border-white/20"
                     }`}
                     onClick={() => setSelectedBusinessId(business.id)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium mb-1">{business.name}</h3>
-                        <p className="text-sm text-gray-400 mb-2">{business.industry}</p>
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                      <div className="flex-1 w-full">
+                        <h3 className="text-sm sm:text-base font-medium mb-1">{business.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-400 mb-2">{business.industry}</p>
                         <a
                           href={business.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-indigo-400 hover:underline"
+                          className="text-[10px] sm:text-xs text-indigo-400 hover:underline break-all"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {business.url}
                         </a>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex sm:flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
                         <span
-                          className={`px-2 py-1 rounded text-xs ${
+                          className={`px-2 py-1 rounded text-[10px] sm:text-xs flex-1 sm:flex-none text-center ${
                             business.analysis_status === "completed"
                               ? "bg-green-500/10 text-green-400"
                               : business.analysis_status === "in_progress"
@@ -677,7 +682,7 @@ export default function DashboardPage() {
                             e.stopPropagation()
                             handleViewProspects(business.id)
                           }}
-                          className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300"
+                          className="flex items-center gap-1 text-[10px] sm:text-xs text-cyan-400 hover:text-cyan-300 flex-1 sm:flex-none justify-center sm:justify-start"
                         >
                           <Eye className="w-3 h-3" />
                           View Prospects
@@ -688,71 +693,71 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Building2 className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <h3 className="font-medium mb-2">No businesses yet</h3>
-                <p className="text-sm text-gray-400 mb-6">Add your first business to start generating leads</p>
-                {/* Hide "Add Your First Business" button - will be premium feature */}
-                {/* Note: "Add Client Business" will be a premium feature in the future */}
+              <div className="text-center py-8 sm:py-12">
+                <Building2 className="w-10 h-10 sm:w-12 sm:h-12 text-gray-600 mx-auto mb-3 sm:mb-4" />
+                <h3 className="text-sm sm:text-base font-medium mb-2">No businesses yet</h3>
+                <p className="text-xs sm:text-sm text-gray-400 mb-6">
+                  Add your first business to start generating leads
+                </p>
               </div>
             )}
           </div>
 
           {/* Business actions */}
-          <div className="bg-neutral-900/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             {selectedBusiness ? (
               <>
-                <h2 className="text-lg font-semibold mb-4">Actions</h2>
+                <h2 className="text-base sm:text-lg font-semibold mb-4">Actions</h2>
                 <div className="space-y-3">
                   <button
                     onClick={() => handleTriggerWorkflow("analyze_business")}
                     disabled={workflowStatus?.status === "running"}
-                    className="w-full flex items-center gap-3 p-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl transition disabled:opacity-50"
+                    className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg sm:rounded-xl transition disabled:opacity-50"
                   >
-                    <Sparkles className="w-5 h-5 text-indigo-400" />
-                    <div className="text-left flex-1">
-                      <div className="font-medium text-sm">Analyze Business</div>
-                      <div className="text-xs text-gray-400">AI-powered analysis</div>
+                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400 flex-shrink-0" />
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="font-medium text-xs sm:text-sm truncate">Analyze Business</div>
+                      <div className="text-[10px] sm:text-xs text-gray-400">AI-powered analysis</div>
                     </div>
-                    <Play className="w-4 h-4 text-indigo-400" />
+                    <Play className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-400 flex-shrink-0" />
                   </button>
 
                   <button
                     onClick={() => handleTriggerWorkflow("discover_prospects")}
                     disabled={workflowStatus?.status === "running"}
-                    className="w-full flex items-center gap-3 p-4 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl transition disabled:opacity-50"
+                    className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg sm:rounded-xl transition disabled:opacity-50"
                   >
-                    <Search className="w-5 h-5 text-purple-400" />
-                    <div className="text-left flex-1">
-                      <div className="font-medium text-sm">Discover Prospects</div>
-                      <div className="text-xs text-gray-400">Find 20-50 leads</div>
+                    <Search className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 flex-shrink-0" />
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="font-medium text-xs sm:text-sm truncate">Discover Prospects</div>
+                      <div className="text-[10px] sm:text-xs text-gray-400">Find 20-50 leads</div>
                     </div>
-                    <Play className="w-4 h-4 text-purple-400" />
+                    <Play className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
                   </button>
 
                   <button
                     onClick={() => handleTriggerWorkflow("generate_emails")}
                     disabled={workflowStatus?.status === "running"}
-                    className="w-full flex items-center gap-3 p-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl transition disabled:opacity-50"
+                    className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-lg sm:rounded-xl transition disabled:opacity-50"
                   >
-                    <Zap className="w-5 h-5 text-cyan-400" />
-                    <div className="text-left flex-1">
-                      <div className="font-medium text-sm">Generate Emails</div>
-                      <div className="text-xs text-gray-400">AI email campaign</div>
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 flex-shrink-0" />
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="font-medium text-xs sm:text-sm truncate">Generate Emails</div>
+                      <div className="text-[10px] sm:text-xs text-gray-400">AI email campaign</div>
                     </div>
-                    <Play className="w-4 h-4 text-cyan-400" />
+                    <Play className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400 flex-shrink-0" />
                   </button>
                 </div>
 
-                <div className="mt-6 p-4 bg-white/5 rounded-xl">
-                  <h3 className="text-sm font-medium mb-2">Selected Business</h3>
-                  <p className="text-sm text-gray-400">{selectedBusiness.name}</p>
+                <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-white/5 rounded-lg sm:rounded-xl">
+                  <h3 className="text-xs sm:text-sm font-medium mb-1 sm:mb-2">Selected Business</h3>
+                  <p className="text-xs sm:text-sm text-gray-400 break-words">{selectedBusiness.name}</p>
                 </div>
               </>
             ) : (
-              <div className="text-center py-12">
-                <Target className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                <p className="text-sm text-gray-400">Select a business to see actions</p>
+              <div className="text-center py-8 sm:py-12">
+                <Target className="w-8 h-8 sm:w-10 sm:h-10 text-gray-600 mx-auto mb-2 sm:mb-3" />
+                <p className="text-xs sm:text-sm text-gray-400">Select a business to see actions</p>
               </div>
             )}
           </div>
@@ -845,53 +850,71 @@ export default function DashboardPage() {
       {/* Prospects Modal */}
       {showProspects && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-neutral-900 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
               <div>
-                <h3 className="text-xl font-semibold">Prospects</h3>
-                <p className="text-sm text-gray-400 mt-1">{prospects.length} prospects discovered</p>
+                <h3 className="text-base sm:text-xl font-semibold">Prospects</h3>
+                <p className="text-xs sm:text-sm text-gray-400 mt-1">{prospects.length} prospects discovered</p>
               </div>
               <button onClick={() => setShowProspects(false)}>
-                <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 hover:text-white" />
               </button>
             </div>
 
             {prospects.length > 0 ? (
-              <div className="overflow-auto flex-1">
-                <table className="w-full">
-                  <thead className="border-b border-white/10 sticky top-0 bg-neutral-900">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Company</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Contact</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Email</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Industry</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Source</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {prospects.map((prospect) => (
-                      <tr key={prospect.id} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-3 px-4 text-sm">{prospect.company_name}</td>
-                        <td className="py-3 px-4 text-sm">{prospect.contact_name}</td>
-                        <td className="py-3 px-4 text-sm text-indigo-400">{prospect.contact_email}</td>
-                        <td className="py-3 px-4 text-sm">{prospect.industry}</td>
-                        <td className="py-3 px-4 text-sm text-gray-400">{prospect.source}</td>
-                        <td className="py-3 px-4 text-sm">
-                          <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded text-xs">
-                            {prospect.status}
-                          </span>
-                        </td>
+              <div className="overflow-auto flex-1 -mx-4 sm:mx-0">
+                <div className="min-w-[600px] px-4 sm:px-0">
+                  <table className="w-full">
+                    <thead className="border-b border-white/10 sticky top-0 bg-neutral-900">
+                      <tr>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-400">
+                          Company
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-400">
+                          Contact
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-400">
+                          Email
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-400">
+                          Industry
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-400">
+                          Source
+                        </th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-medium text-gray-400">
+                          Status
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {prospects.map((prospect) => (
+                        <tr key={prospect.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">{prospect.company_name}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">{prospect.contact_name}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm text-indigo-400 break-all">
+                            {prospect.contact_email}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">{prospect.industry}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm text-gray-400">
+                            {prospect.source}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded text-[10px] sm:text-xs whitespace-nowrap">
+                              {prospect.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Target className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <h3 className="font-medium mb-2">No prospects yet</h3>
-                <p className="text-sm text-gray-400">Click "Discover Prospects" to start finding leads</p>
+              <div className="text-center py-8 sm:py-12">
+                <Target className="w-10 h-10 sm:w-12 sm:h-12 text-gray-600 mx-auto mb-3 sm:mb-4" />
+                <h3 className="text-sm sm:text-base font-medium mb-2">No prospects yet</h3>
+                <p className="text-xs sm:text-sm text-gray-400">Click "Discover Prospects" to start finding leads</p>
               </div>
             )}
           </div>
