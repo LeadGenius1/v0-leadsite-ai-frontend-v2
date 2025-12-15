@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+
 export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
@@ -19,7 +21,7 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("https://api.leadsite.ai/api/auth/signup", {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

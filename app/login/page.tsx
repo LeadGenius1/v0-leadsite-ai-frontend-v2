@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -17,7 +19,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -32,7 +34,10 @@ export default function LoginPage() {
       }
 
       if (data.token) {
-        localStorage.setItem("token", data.token)
+        localStorage.setItem("sessionToken", data.token)
+      }
+      if (data.user?.customerId) {
+        localStorage.setItem("customerId", data.user.customerId)
       }
 
       // Redirect to dashboard

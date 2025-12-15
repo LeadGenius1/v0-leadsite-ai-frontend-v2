@@ -6,6 +6,8 @@ import { Check, X } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+
 const plans = [
   {
     name: "Starter",
@@ -103,7 +105,7 @@ export function Pricing() {
     setSuccess("")
 
     try {
-      const response = await fetch("https://api.leadsite.ai/api/auth/signup", {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
