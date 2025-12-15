@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
 
 export function Hero() {
   return (
@@ -207,7 +206,6 @@ export function Hero() {
             `}</style>
             <button className="shiny-cta focus:outline-none">
               <span>Start Free Trial</span>
-              <ArrowRight className="ml-2 w-3 h-3 sm:w-4 sm:h-4" />
             </button>
           </Link>
         </div>

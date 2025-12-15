@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Building2,
@@ -19,7 +19,6 @@ import {
   X,
   AlertCircle,
 } from "lucide-react"
-import { api } from "@/lib/api"
 
 interface UserData {
   customerId: string
@@ -95,6 +94,45 @@ export default function DashboardPage() {
   const [businessForm, setBusinessForm] = useState({ name: "", industry: "", url: "" })
   const [formLoading, setFormLoading] = useState(false)
 
+  const [isPolling, setIsPolling] = useState(false)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const callApi = async (method: string, endpoint: string, body: any = null) => {
+    try {
+      const token = localStorage.getItem("sessionToken")
+      if (!token) {
+        router.push("/")
+        return null
+      }
+
+      const response = await fetch(`https://api.leadsite.ai${endpoint}`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: body ? JSON.stringify(body) : null,
+      })
+
+      if (response.status === 401) {
+        console.log("[v0] 401 Unauthorized - redirecting to landing page")
+        localStorage.removeItem("sessionToken")
+        localStorage.removeItem("customerId")
+        router.push("/")
+        return null
+      }
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "API request failed")
+      }
+      return data
+    } catch (error: any) {
+      console.error("[v0] API Error:", error)
+      throw error
+    }
+  }
+
   useEffect(() => {
     const token = localStorage.getItem("sessionToken")
     if (!token) {
@@ -105,7 +143,11 @@ export default function DashboardPage() {
     async function loadDashboard() {
       try {
         setLoading(true)
-        const userData = await api.getUserDashboard(token)
+
+        const userData = await callApi("GET", "/api/dashboard")
+        if (!userData) return
+
+        console.log("[v0] Dashboard data loaded:", userData)
         setUser(userData)
         localStorage.setItem("customerId", userData.customerId)
 
@@ -115,24 +157,20 @@ export default function DashboardPage() {
         const daysLeft = Math.ceil((trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
         setTrialDaysLeft(Math.max(0, daysLeft))
 
-        // Load businesses and campaigns
         const [businessesData, campaignsData] = await Promise.all([
-          api.getBusinesses(userData.customerId, token),
-          api.getCampaignsByCustomer(userData.customerId, token),
+          callApi("GET", `/api/businesses?customer_id=${userData.customerId}`),
+          callApi("GET", `/api/campaigns?customer_id=${userData.customerId}`),
         ])
 
-        setBusinesses(businessesData.businesses || [])
-        setCampaigns(campaignsData.campaigns || [])
+        console.log("[v0] Businesses:", businessesData)
+        console.log("[v0] Campaigns:", campaignsData)
+
+        setBusinesses(businessesData?.businesses || [])
+        setCampaigns(campaignsData?.campaigns || [])
         setError(null)
       } catch (err: any) {
         console.error("[v0] Dashboard load failed:", err)
-        if (err.message?.includes("401")) {
-          localStorage.removeItem("sessionToken")
-          localStorage.removeItem("customerId")
-          router.push("/signup")
-        } else {
-          setError("Failed to load dashboard data")
-        }
+        setError("Failed to load dashboard data")
       } finally {
         setLoading(false)
       }
@@ -141,94 +179,245 @@ export default function DashboardPage() {
     loadDashboard()
   }, [router])
 
-  const handleCreateBusiness = async () => {
-    const token = localStorage.getItem("sessionToken")
-    const customerId = localStorage.getItem("customerId")
-    if (!token || !customerId) return
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [])
 
+  const startPolling = (workflowType: string) => {
+    console.log("[v0] Starting polling for workflow:", workflowType)
+    setIsPolling(true)
+
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const customerId = localStorage.getItem("customerId")
+        if (!customerId) return
+
+        // Poll businesses for status updates
+        const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
+        if (businessesData?.businesses) {
+          console.log("[v0] Polling - businesses updated:", businessesData.businesses)
+          setBusinesses(businessesData.businesses)
+
+          // Check if workflow completed
+          const selectedBusiness = businessesData.businesses.find((b: Business) => b.id === selectedBusinessId)
+          if (selectedBusiness) {
+            if (workflowType === "analyze_business" && selectedBusiness.analysis_status === "completed") {
+              console.log("[v0] Analysis completed!")
+              stopPolling()
+              setWorkflowStatus({
+                type: "analyze_business",
+                status: "complete",
+                message: "Business analysis completed successfully!",
+              })
+            }
+          }
+        }
+
+        // Poll campaigns for status updates if discovering or sending
+        if (workflowType === "discover_prospects" || workflowType === "generate_emails") {
+          const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${customerId}`)
+          if (campaignsData?.campaigns) {
+            console.log("[v0] Polling - campaigns updated:", campaignsData.campaigns)
+            setCampaigns(campaignsData.campaigns)
+
+            const latestCampaign = campaignsData.campaigns[0]
+            if (latestCampaign) {
+              if (workflowType === "discover_prospects" && latestCampaign.status === "prospects_found") {
+                console.log("[v0] Prospects discovered!")
+                stopPolling()
+                setWorkflowStatus({
+                  type: "discover_prospects",
+                  status: "complete",
+                  message: "Prospects discovered successfully! Click 'View Prospects' to see results.",
+                })
+                // Auto-load prospects
+                if (selectedBusinessId) {
+                  loadProspects(selectedBusinessId)
+                }
+              } else if (workflowType === "generate_emails" && latestCampaign.status === "sent") {
+                console.log("[v0] Emails sent!")
+                stopPolling()
+                setWorkflowStatus({
+                  type: "generate_emails",
+                  status: "complete",
+                  message: "Email campaign sent successfully!",
+                })
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("[v0] Polling error:", error)
+      }
+    }, 2000) // Poll every 2 seconds
+  }
+
+  const stopPolling = () => {
+    console.log("[v0] Stopping polling")
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+    setIsPolling(false)
+
+    setTimeout(() => {
+      setWorkflowStatus(null)
+    }, 3000)
+  }
+
+  const handleTriggerWorkflow = async (workflowType: "analyze_business" | "discover_prospects" | "generate_emails") => {
+    if (!selectedBusinessId) {
+      setError("Please select a business first")
+      return
+    }
+
+    const customerId = localStorage.getItem("customerId")
+    if (!customerId) {
+      setError("Customer ID not found")
+      return
+    }
+
+    try {
+      console.log("[v0] Triggering workflow:", workflowType, "for business:", selectedBusinessId)
+
+      setWorkflowStatus({
+        type: workflowType,
+        status: "running",
+        message: getWorkflowMessage(workflowType, "running"),
+      })
+      setError(null)
+
+      if (workflowType === "analyze_business") {
+        // Trigger business analysis
+        await callApi("POST", `/api/businesses/${selectedBusinessId}/analyze`, {})
+        console.log("[v0] Business analysis triggered")
+        startPolling(workflowType)
+      } else if (workflowType === "discover_prospects") {
+        // Step 1: Create campaign first
+        console.log("[v0] Creating campaign first...")
+        const campaignData = await callApi("POST", "/api/campaigns", {
+          name: `Campaign ${new Date().toLocaleDateString()}`,
+          business_id: selectedBusinessId,
+          customer_id: customerId,
+        })
+
+        if (!campaignData?.id) {
+          throw new Error("Failed to create campaign")
+        }
+
+        console.log("[v0] Campaign created:", campaignData.id)
+
+        // Step 2: Trigger discover prospects on the new campaign
+        await callApi("POST", `/api/campaigns/${campaignData.id}/discover-prospects`, {})
+        console.log("[v0] Prospect discovery triggered")
+
+        // Reload campaigns to show the new one
+        const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${customerId}`)
+        setCampaigns(campaignsData?.campaigns || [])
+
+        startPolling(workflowType)
+      } else if (workflowType === "generate_emails") {
+        // Find latest campaign for this business
+        const latestCampaign = campaigns.find((c) => c.business_id === selectedBusinessId)
+
+        if (!latestCampaign) {
+          setError("No campaign found. Please discover prospects first.")
+          setWorkflowStatus(null)
+          return
+        }
+
+        // Trigger email send
+        await callApi("POST", `/api/campaigns/${latestCampaign.id}/send`, {})
+        console.log("[v0] Email send triggered")
+        startPolling(workflowType)
+      }
+    } catch (err: any) {
+      console.error("[v0] Workflow trigger failed:", err)
+      setWorkflowStatus({
+        type: workflowType,
+        status: "error",
+        message: `Workflow failed: ${err.message}`,
+      })
+      stopPolling()
+    }
+  }
+
+  const getWorkflowMessage = (type: string, status: string) => {
+    const messages: Record<string, Record<string, string>> = {
+      analyze_business: {
+        running: "Analyzing business with AI...",
+        complete: "Business analysis completed!",
+      },
+      discover_prospects: {
+        running: "Discovering prospects from Google Maps and Apollo.io...",
+        complete: "Prospects discovered successfully!",
+      },
+      generate_emails: {
+        running: "Generating and sending personalized emails...",
+        complete: "Emails sent successfully!",
+      },
+    }
+    return messages[type]?.[status] || "Processing..."
+  }
+
+  const loadProspects = async (businessId: string) => {
+    try {
+      console.log("[v0] Loading prospects for business:", businessId)
+      const data = await callApi("GET", `/api/prospects?business_id=${businessId}`)
+      console.log("[v0] Prospects loaded:", data)
+      setProspects(data?.prospects || [])
+    } catch (error) {
+      console.error("[v0] Failed to load prospects:", error)
+      setError("Failed to load prospects")
+    }
+  }
+
+  const handleCreateBusiness = async () => {
     if (!businessForm.name || !businessForm.industry || !businessForm.url) {
-      setError("All fields are required")
+      setError("Please fill in all fields")
+      return
+    }
+
+    const customerId = localStorage.getItem("customerId")
+    if (!customerId) {
+      setError("Customer ID not found")
       return
     }
 
     try {
       setFormLoading(true)
-      const result = await api.createBusiness(
-        {
-          customer_id: customerId,
-          name: businessForm.name,
-          industry: businessForm.industry,
-          url: businessForm.url,
-        },
-        token,
-      )
 
-      // Refresh businesses
-      const businessesData = await api.getBusinesses(customerId, token)
-      setBusinesses(businessesData.businesses || [])
+      const result = await callApi("POST", "/api/businesses/create", {
+        customer_id: customerId,
+        name: businessForm.name,
+        industry: businessForm.industry,
+        url: businessForm.url,
+      })
+
+      console.log("[v0] Business created:", result)
+
+      // Reload businesses
+      const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
+      setBusinesses(businessesData?.businesses || [])
 
       setShowCreateBusiness(false)
       setBusinessForm({ name: "", industry: "", url: "" })
       setError(null)
-    } catch (err) {
-      console.error("[v0] Create business failed:", err)
-      setError("Failed to create business")
+    } catch (err: any) {
+      console.error("[v0] Failed to create business:", err)
+      setError(`Failed to create business: ${err.message}`)
     } finally {
       setFormLoading(false)
     }
   }
 
-  const handleTriggerWorkflow = async (workflowType: "analyze_business" | "discover_prospects" | "generate_emails") => {
-    const token = localStorage.getItem("sessionToken")
-    const customerId = localStorage.getItem("customerId")
-    if (!token || !customerId || !selectedBusinessId) return
-
-    try {
-      setWorkflowStatus({ type: workflowType, status: "running", message: "Workflow running..." })
-
-      await api.triggerWorkflow(
-        {
-          customer_id: customerId,
-          business_id: selectedBusinessId,
-          workflow_type: workflowType,
-        },
-        token,
-      )
-
-      setWorkflowStatus({
-        type: workflowType,
-        status: "complete",
-        message: `${workflowType === "analyze_business" ? "Analysis" : workflowType === "discover_prospects" ? "Prospect discovery" : "Email generation"} complete!`,
-      })
-
-      // Refresh data after workflow completes
-      setTimeout(async () => {
-        if (workflowType === "discover_prospects") {
-          const prospectsData = await api.getProspectsForBusiness(selectedBusinessId, token)
-          setProspects(prospectsData.prospects || [])
-        }
-        setWorkflowStatus(null)
-      }, 2000)
-    } catch (err) {
-      console.error("[v0] Workflow trigger failed:", err)
-      setWorkflowStatus({ type: workflowType, status: "error", message: "Workflow failed" })
-      setTimeout(() => setWorkflowStatus(null), 3000)
-    }
-  }
-
   const handleViewProspects = async (businessId: string) => {
-    const token = localStorage.getItem("sessionToken")
-    if (!token) return
-
-    try {
-      setSelectedBusinessId(businessId)
-      const prospectsData = await api.getProspectsForBusiness(businessId, token)
-      setProspects(prospectsData.prospects || [])
-      setShowProspects(true)
-    } catch (err) {
-      console.error("[v0] Load prospects failed:", err)
-      setError("Failed to load prospects")
-    }
+    await loadProspects(businessId)
+    setShowProspects(true)
   }
 
   const handleLogout = () => {

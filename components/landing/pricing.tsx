@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { Check, X, Sparkles, ArrowRight } from "lucide-react"
+import { Check, X } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -103,29 +103,43 @@ export function Pricing() {
     setSuccess("")
 
     try {
-      const response = await fetch("https://api.leadsite.ai/api/trial/signup", {
+      const response = await fetch("https://api.leadsite.ai/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
           company_name: formData.company,
-          plan: selectedPlan,
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to sign up for trial")
+        // Handle specific error cases
+        if (response.status === 409) {
+          throw new Error("Email already exists")
+        } else if (response.status === 500) {
+          throw new Error("Signup failed")
+        } else {
+          throw new Error(data.error || "Failed to sign up for trial")
+        }
       }
 
-      localStorage.setItem("token", data.sessionToken || data.token)
-      localStorage.setItem("customerId", data.customerId)
+      // Store session data
+      localStorage.setItem("token", data.token)
+      if (data.customerId) {
+        localStorage.setItem("customerId", data.customerId)
+      }
+
       setSuccess("Trial account created! Redirecting to dashboard...")
-      setTimeout(() => router.push("/dashboard"), 1500)
+      setTimeout(() => router.push("/dashboard"), 2000)
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.")
+      if (err.message === "Failed to fetch") {
+        setError("Connection failed. Please check your internet and try again.")
+      } else {
+        setError(err.message || "Something went wrong. Please try again.")
+      }
     } finally {
       setLoading(false)
     }
@@ -245,18 +259,8 @@ export function Pricing() {
                       <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-1/2 -skew-x-12 transform origin-left"></span>
                     </span>
 
-                    {/* Icon Left */}
-                    <span className="relative z-10 text-indigo-400 group-hover:text-indigo-300 transition-colors duration-300">
-                      <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </span>
-
                     {/* Text */}
                     <span className="relative z-10 font-medium tracking-tight">{plan.buttonText}</span>
-
-                    {/* Arrow Right with Slide Effect */}
-                    <span className="relative z-10 text-neutral-400 group-hover:text-white transition-all duration-300 group-hover:translate-x-0.5">
-                      <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    </span>
                   </button>
                 </div>
               ) : (
