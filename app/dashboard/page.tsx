@@ -36,6 +36,7 @@ interface Business {
   industry: string
   url: string
   analysis_status: string
+  discovery_status: string
   created_at: string
 }
 
@@ -157,11 +158,14 @@ export default function DashboardPage() {
         setUser(userData)
         localStorage.setItem("customerId", userData.customerId)
 
+        let profileData
         try {
-          await callApi("GET", "/api/profile")
+          profileData = await callApi("GET", "/api/profile")
+          console.log("[Dashboard] Profile data loaded:", profileData)
         } catch (profileErr: any) {
           // If profile doesn't exist (404), redirect to onboarding
           if (profileErr.message.includes("404") || profileErr.message.includes("not found")) {
+            console.log("[Dashboard] No profile found, redirecting to onboarding")
             router.push("/onboarding")
             return
           }
@@ -173,15 +177,25 @@ export default function DashboardPage() {
         const daysLeft = Math.ceil((trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
         setTrialDaysLeft(Math.max(0, daysLeft))
 
-        const [businessesData, campaignsData] = await Promise.all([
-          callApi("GET", `/api/businesses?customer_id=${userData.customerId}`),
-          callApi("GET", `/api/campaigns?customer_id=${userData.customerId}`),
-        ])
+        const businessFromProfile = profileData?.profile
+          ? {
+              id: profileData.profile.id,
+              name: profileData.profile.business_name,
+              industry: profileData.profile.industry,
+              url: profileData.profile.website,
+              customer_id: userData.customerId,
+              analysis_status: profileData.profile.analysis_status || "pending",
+              discovery_status: profileData.profile.discovery_status || "pending",
+              created_at: profileData.profile.created_at,
+            }
+          : null
 
-        console.log("[Dashboard] Businesses:", businessesData)
+        console.log("[Dashboard] Business from profile:", businessFromProfile)
+
+        const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${userData.customerId}`)
         console.log("[Dashboard] Campaigns:", campaignsData)
 
-        setBusinesses(businessesData?.businesses || [])
+        setBusinesses(businessFromProfile ? [businessFromProfile] : [])
         setCampaigns(campaignsData?.campaigns || [])
         setError(null)
       } catch (err: any) {
