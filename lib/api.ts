@@ -316,7 +316,7 @@ export const api = {
     businessId: string
     message: string
   }> => {
-    return apiFetch("/api/businesses/create", {
+    return apiFetch("/api/businesses", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),

@@ -395,18 +395,32 @@ export default function DashboardPage() {
   const handleCreateBusiness = async (e: React.FormEvent) => {
     e.preventDefault()
     const customerId = localStorage.getItem("customerId")
-    if (!customerId) return
+
+    if (!customerId) {
+      setError("Customer ID not found. Please log in again.")
+      return
+    }
+
+    // Validate form fields
+    if (!businessForm.name.trim() || !businessForm.industry || !businessForm.url.trim()) {
+      setError("Please fill in all fields")
+      return
+    }
 
     setFormLoading(true)
     setError(null)
 
     try {
-      await callApi("POST", "/api/businesses/create", {
-        customer_id: customerId,
+      console.log("[v0] Creating business:", { customerId, businessForm })
+
+      await callApi("POST", "/api/businesses", {
+        customer_id: Number.parseInt(customerId),
         name: businessForm.name,
         industry: businessForm.industry,
         url: businessForm.url,
       })
+
+      console.log("[v0] Business created successfully")
 
       // Reload businesses
       const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
@@ -419,11 +433,16 @@ export default function DashboardPage() {
       setWorkflowStatus({
         type: "create_business",
         status: "complete",
-        message: "Business added successfully!",
+        message: "Business created successfully!",
       })
-      setTimeout(() => setWorkflowStatus(null), 3000)
+
+      // Clear status after 3 seconds
+      setTimeout(() => {
+        setWorkflowStatus(null)
+      }, 3000)
     } catch (err: any) {
-      setError(`Failed to create business: ${err.message}`)
+      console.error("[v0] Error creating business:", err)
+      setError(err.message || "Failed to create business")
     } finally {
       setFormLoading(false)
     }
