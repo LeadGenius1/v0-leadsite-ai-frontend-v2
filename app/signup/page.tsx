@@ -48,7 +48,7 @@ export default function SignupPage() {
       localStorage.setItem("token", data.token)
       setSuccess(true)
       setTimeout(() => {
-        router.push("/dashboard")
+        router.push("/onboarding")
       }, 2000)
     } catch (err) {
       if (err instanceof TypeError && err.message.includes("fetch")) {
@@ -86,7 +86,7 @@ export default function SignupPage() {
                   />
                 </svg>
                 <h3 className="text-sm font-medium text-green-500">
-                  Trial account created! Redirecting to dashboard...
+                  Trial account created! Redirecting to onboarding...
                 </h3>
               </div>
             </div>

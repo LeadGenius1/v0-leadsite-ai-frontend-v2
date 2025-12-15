@@ -8,7 +8,6 @@ import {
   Building2,
   Target,
   Mail,
-  Plus,
   LogOut,
   Sparkles,
   Zap,
@@ -143,7 +142,13 @@ export default function DashboardPage() {
       return
     }
 
-    async function loadDashboard() {
+    async function checkProfileAndLoadDashboard() {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        router.push("/login")
+        return
+      }
+
       try {
         setLoading(true)
 
@@ -153,6 +158,16 @@ export default function DashboardPage() {
         console.log("[v0] Dashboard data loaded:", userData)
         setUser(userData)
         localStorage.setItem("customerId", userData.customerId)
+
+        try {
+          await callApi("GET", "/api/profile")
+        } catch (profileErr: any) {
+          // If profile doesn't exist (404), redirect to onboarding
+          if (profileErr.message.includes("404") || profileErr.message.includes("not found")) {
+            router.push("/onboarding")
+            return
+          }
+        }
 
         // Calculate trial days left
         const trialEnd = new Date(userData.trial_ends_at)
@@ -179,7 +194,7 @@ export default function DashboardPage() {
       }
     }
 
-    loadDashboard()
+    checkProfileAndLoadDashboard()
   }, [router])
 
   useEffect(() => {
@@ -604,13 +619,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 bg-neutral-900/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Your Businesses</h2>
-              <button
-                onClick={() => setShowCreateBusiness(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 transition"
-              >
-                <Plus className="w-4 h-4" />
-                Add Business
-              </button>
+              {/* Note: "Add Client Business" will be a premium feature in the future */}
             </div>
 
             {businesses.length > 0 ? (
@@ -671,13 +680,8 @@ export default function DashboardPage() {
                 <Building2 className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <h3 className="font-medium mb-2">No businesses yet</h3>
                 <p className="text-sm text-gray-400 mb-6">Add your first business to start generating leads</p>
-                <button
-                  onClick={() => setShowCreateBusiness(true)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-100 transition"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Your First Business
-                </button>
+                {/* Hide "Add Your First Business" button - will be premium feature */}
+                {/* Note: "Add Client Business" will be a premium feature in the future */}
               </div>
             )}
           </div>
