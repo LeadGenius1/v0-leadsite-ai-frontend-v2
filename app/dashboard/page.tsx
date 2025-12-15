@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import {
   Building2,
   Target,
@@ -24,12 +23,11 @@ import {
 } from "lucide-react"
 
 interface UserData {
-  id: string
+  customerId: string
   email: string
-  company_name: string
   plan_tier: string
   trial_ends_at: string
-  trial_days_left: number
+  created_at: string
 }
 
 interface Business {
@@ -37,7 +35,7 @@ interface Business {
   customer_id: string
   name: string
   industry: string
-  website: string
+  url: string
   analysis_status: string
   created_at: string
 }
@@ -62,8 +60,6 @@ interface Prospect {
   source: string
 }
 
-const API_URL = "https://api.leadsite.ai"
-
 const INDUSTRIES = [
   "Technology",
   "Healthcare",
@@ -87,6 +83,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [trialDaysLeft, setTrialDaysLeft] = useState(0)
 
+  // Modal states
   const [showCreateBusiness, setShowCreateBusiness] = useState(false)
   const [showProspects, setShowProspects] = useState(false)
   const [workflowStatus, setWorkflowStatus] = useState<{
@@ -95,6 +92,7 @@ export default function DashboardPage() {
     message: string
   } | null>(null)
 
+  // Form states
   const [businessForm, setBusinessForm] = useState({ name: "", industry: "", url: "" })
   const [formLoading, setFormLoading] = useState(false)
 
@@ -102,19 +100,15 @@ export default function DashboardPage() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const getToken = () => {
-    return localStorage.getItem("token")
-  }
-
   const callApi = async (method: string, endpoint: string, body: any = null) => {
     try {
-      const token = getToken()
+      const token = localStorage.getItem("sessionToken")
       if (!token) {
-        router.push("/login")
+        router.push("/")
         return null
       }
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`https://api.leadsite.ai${endpoint}`, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -124,9 +118,10 @@ export default function DashboardPage() {
       })
 
       if (response.status === 401) {
-        console.log("[Dashboard] 401 Unauthorized - redirecting to login")
-        localStorage.removeItem("token")
-        router.push("/login")
+        console.log("[v0] 401 Unauthorized - redirecting to landing page")
+        localStorage.removeItem("sessionToken")
+        localStorage.removeItem("customerId")
+        router.push("/")
         return null
       }
 
@@ -136,15 +131,15 @@ export default function DashboardPage() {
       }
       return data
     } catch (error: any) {
-      console.error("[Dashboard] API Error:", error)
+      console.error("[v0] API Error:", error)
       throw error
     }
   }
 
   useEffect(() => {
-    const token = getToken()
+    const token = localStorage.getItem("sessionToken")
     if (!token) {
-      router.push("/login")
+      router.push("/signup")
       return
     }
 
@@ -152,26 +147,32 @@ export default function DashboardPage() {
       try {
         setLoading(true)
 
-        const dashboardData = await callApi("GET", "/api/dashboard")
-        if (!dashboardData) return
+        const userData = await callApi("GET", "/api/dashboard")
+        if (!userData) return
 
-        console.log("[Dashboard] Data loaded:", dashboardData)
-        setUser(dashboardData.user)
-        setTrialDaysLeft(dashboardData.user?.trial_days_left || 0)
+        console.log("[v0] Dashboard data loaded:", userData)
+        setUser(userData)
+        localStorage.setItem("customerId", userData.customerId)
+
+        // Calculate trial days left
+        const trialEnd = new Date(userData.trial_ends_at)
+        const today = new Date()
+        const daysLeft = Math.ceil((trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        setTrialDaysLeft(Math.max(0, daysLeft))
 
         const [businessesData, campaignsData] = await Promise.all([
-          callApi("GET", "/api/businesses"),
-          callApi("GET", "/api/campaigns"),
+          callApi("GET", `/api/businesses?customer_id=${userData.customerId}`),
+          callApi("GET", `/api/campaigns?customer_id=${userData.customerId}`),
         ])
 
-        console.log("[Dashboard] Businesses:", businessesData)
-        console.log("[Dashboard] Campaigns:", campaignsData)
+        console.log("[v0] Businesses:", businessesData)
+        console.log("[v0] Campaigns:", campaignsData)
 
         setBusinesses(businessesData?.businesses || [])
         setCampaigns(campaignsData?.campaigns || [])
         setError(null)
       } catch (err: any) {
-        console.error("[Dashboard] Load failed:", err)
+        console.error("[v0] Dashboard load failed:", err)
         setError("Failed to load dashboard data")
       } finally {
         setLoading(false)
@@ -193,26 +194,31 @@ export default function DashboardPage() {
   }, [])
 
   const startPolling = (workflowType: string) => {
-    console.log("[Dashboard] Starting polling for workflow:", workflowType)
+    console.log("[v0] Starting polling for workflow:", workflowType)
     setIsPolling(true)
 
     pollingTimeoutRef.current = setTimeout(() => {
-      console.log("[Dashboard] Polling timeout reached (2 minutes)")
+      console.log("[v0] Polling timeout reached (2 minutes)")
       stopPolling()
       setError("Workflow is taking longer than expected. Please check back later.")
-    }, 120000)
+    }, 120000) // 2 minutes
 
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        const businessesData = await callApi("GET", "/api/businesses")
+        const customerId = localStorage.getItem("customerId")
+        if (!customerId) return
+
+        // Poll businesses for status updates
+        const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
         if (businessesData?.businesses) {
-          console.log("[Dashboard] Polling - businesses updated:", businessesData.businesses)
+          console.log("[v0] Polling - businesses updated:", businessesData.businesses)
           setBusinesses(businessesData.businesses)
 
+          // Check if workflow completed
           const selectedBusiness = businessesData.businesses.find((b: Business) => b.id === selectedBusinessId)
           if (selectedBusiness) {
             if (workflowType === "analyze_business" && selectedBusiness.analysis_status === "completed") {
-              console.log("[Dashboard] Analysis completed!")
+              console.log("[v0] Analysis completed!")
               stopPolling()
               setWorkflowStatus({
                 type: "analyze_business",
@@ -223,27 +229,29 @@ export default function DashboardPage() {
           }
         }
 
+        // Poll campaigns for status updates if discovering or sending
         if (workflowType === "discover_prospects" || workflowType === "generate_emails") {
-          const campaignsData = await callApi("GET", "/api/campaigns")
+          const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${customerId}`)
           if (campaignsData?.campaigns) {
-            console.log("[Dashboard] Polling - campaigns updated:", campaignsData.campaigns)
+            console.log("[v0] Polling - campaigns updated:", campaignsData.campaigns)
             setCampaigns(campaignsData.campaigns)
 
             const latestCampaign = campaignsData.campaigns[0]
             if (latestCampaign) {
               if (workflowType === "discover_prospects" && latestCampaign.status === "prospects_found") {
-                console.log("[Dashboard] Prospects discovered!")
+                console.log("[v0] Prospects discovered!")
                 stopPolling()
                 setWorkflowStatus({
                   type: "discover_prospects",
                   status: "complete",
                   message: "Prospects discovered successfully! Click 'View Prospects' to see results.",
                 })
+                // Auto-load prospects
                 if (selectedBusinessId) {
                   loadProspects(selectedBusinessId)
                 }
               } else if (workflowType === "generate_emails" && latestCampaign.status === "sent") {
-                console.log("[Dashboard] Emails sent!")
+                console.log("[v0] Emails sent!")
                 stopPolling()
                 setWorkflowStatus({
                   type: "generate_emails",
@@ -255,13 +263,13 @@ export default function DashboardPage() {
           }
         }
       } catch (error) {
-        console.error("[Dashboard] Polling error:", error)
+        console.error("[v0] Polling error:", error)
       }
-    }, 3000)
+    }, 2000) // Poll every 2 seconds
   }
 
   const stopPolling = () => {
-    console.log("[Dashboard] Stopping polling")
+    console.log("[v0] Stopping polling")
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
       pollingIntervalRef.current = null
@@ -283,8 +291,14 @@ export default function DashboardPage() {
       return
     }
 
+    const customerId = localStorage.getItem("customerId")
+    if (!customerId) {
+      setError("Customer ID not found")
+      return
+    }
+
     try {
-      console.log("[Dashboard] Triggering workflow:", workflowType, "for business:", selectedBusinessId)
+      console.log("[v0] Triggering workflow:", workflowType, "for business:", selectedBusinessId)
 
       setWorkflowStatus({
         type: workflowType,
@@ -294,30 +308,36 @@ export default function DashboardPage() {
       setError(null)
 
       if (workflowType === "analyze_business") {
+        // Trigger business analysis
         await callApi("POST", `/api/businesses/${selectedBusinessId}/analyze`, {})
-        console.log("[Dashboard] Business analysis triggered")
+        console.log("[v0] Business analysis triggered")
         startPolling(workflowType)
       } else if (workflowType === "discover_prospects") {
-        console.log("[Dashboard] Creating campaign first...")
+        // Step 1: Create campaign first
+        console.log("[v0] Creating campaign first...")
         const campaignData = await callApi("POST", "/api/campaigns", {
           name: `Campaign ${new Date().toLocaleDateString()}`,
           business_id: selectedBusinessId,
+          customer_id: customerId,
         })
 
-        if (!campaignData?.campaign?.id) {
+        if (!campaignData?.id) {
           throw new Error("Failed to create campaign")
         }
 
-        console.log("[Dashboard] Campaign created:", campaignData.campaign.id)
+        console.log("[v0] Campaign created:", campaignData.id)
 
-        await callApi("POST", `/api/campaigns/${campaignData.campaign.id}/discover-prospects`, {})
-        console.log("[Dashboard] Prospect discovery triggered")
+        // Step 2: Trigger discover prospects on the new campaign
+        await callApi("POST", `/api/campaigns/${campaignData.id}/discover-prospects`, {})
+        console.log("[v0] Prospect discovery triggered")
 
-        const campaignsData = await callApi("GET", "/api/campaigns")
+        // Reload campaigns to show the new one
+        const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${customerId}`)
         setCampaigns(campaignsData?.campaigns || [])
 
         startPolling(workflowType)
       } else if (workflowType === "generate_emails") {
+        // Find latest campaign for this business
         const latestCampaign = campaigns.find((c) => c.business_id === selectedBusinessId)
 
         if (!latestCampaign) {
@@ -326,12 +346,13 @@ export default function DashboardPage() {
           return
         }
 
+        // Trigger email send
         await callApi("POST", `/api/campaigns/${latestCampaign.id}/send`, {})
-        console.log("[Dashboard] Email send triggered")
+        console.log("[v0] Email send triggered")
         startPolling(workflowType)
       }
     } catch (err: any) {
-      console.error("[Dashboard] Workflow trigger failed:", err)
+      console.error("[v0] Workflow trigger failed:", err)
       setWorkflowStatus({
         type: workflowType,
         status: "error",
@@ -361,37 +382,34 @@ export default function DashboardPage() {
 
   const loadProspects = async (businessId: string) => {
     try {
-      console.log("[Dashboard] Loading prospects for business:", businessId)
+      console.log("[v0] Loading prospects for business:", businessId)
       const data = await callApi("GET", `/api/prospects?business_id=${businessId}`)
-      console.log("[Dashboard] Prospects loaded:", data)
+      console.log("[v0] Prospects loaded:", data)
       setProspects(data?.prospects || [])
     } catch (error) {
-      console.error("[Dashboard] Failed to load prospects:", error)
+      console.error("[v0] Failed to load prospects:", error)
       setError("Failed to load prospects")
     }
   }
 
   const handleCreateBusiness = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!businessForm.name || !businessForm.industry || !businessForm.url) {
-      setError("Please fill in all fields")
-      return
-    }
+    const customerId = localStorage.getItem("customerId")
+    if (!customerId) return
 
     setFormLoading(true)
     setError(null)
 
     try {
-      // Call correct endpoint with correct field names
-      await callApi("POST", "/api/businesses", {
+      await callApi("POST", "/api/businesses/create", {
+        customer_id: customerId,
         name: businessForm.name,
         industry: businessForm.industry,
         url: businessForm.url,
       })
 
       // Reload businesses
-      const businessesData = await callApi("GET", "/api/businesses")
+      const businessesData = await callApi("GET", `/api/businesses?customer_id=${customerId}`)
       setBusinesses(businessesData?.businesses || [])
 
       // Reset form and close modal
@@ -417,8 +435,9 @@ export default function DashboardPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    router.push("/login")
+    localStorage.removeItem("sessionToken")
+    localStorage.removeItem("customerId")
+    router.push("/")
   }
 
   if (loading) {
@@ -460,9 +479,9 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold">Welcome,</h1>
+              <h1 className="text-xl font-semibold">Welcome, {user?.email}</h1>
               <div className="flex items-center gap-4 mt-1">
-                <span className="text-xs text-gray-400">Plan: {user?.plan_tier || "free"}</span>
+                <span className="text-xs text-gray-400">Plan: {user?.plan_tier}</span>
                 {trialDaysLeft > 0 && (
                   <span className="text-xs text-yellow-400 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
@@ -591,14 +610,14 @@ export default function DashboardPage() {
                       <div className="flex-1">
                         <h3 className="font-medium mb-1">{business.name}</h3>
                         <p className="text-sm text-gray-400 mb-2">{business.industry}</p>
-                        
-                          href={business.website}
+                        <a
+                          href={business.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-indigo-400 hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {business.website}
+                          {business.url}
                         </a>
                       </div>
                       <div className="flex flex-col items-end gap-2">
@@ -606,7 +625,7 @@ export default function DashboardPage() {
                           className={`px-2 py-1 rounded text-xs ${
                             business.analysis_status === "completed"
                               ? "bg-green-500/10 text-green-400"
-                              : business.analysis_status === "processing"
+                              : business.analysis_status === "in_progress"
                                 ? "bg-yellow-500/10 text-yellow-400"
                                 : "bg-gray-500/10 text-gray-400"
                           }`}
@@ -716,12 +735,11 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateBusiness} className="space-y-4">
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Business Name</label>
                 <input
                   type="text"
-                  required
                   value={businessForm.name}
                   onChange={(e) => setBusinessForm({ ...businessForm, name: e.target.value })}
                   placeholder="Acme Corporation"
@@ -732,7 +750,6 @@ export default function DashboardPage() {
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Industry</label>
                 <select
-                  required
                   value={businessForm.industry}
                   onChange={(e) => setBusinessForm({ ...businessForm, industry: e.target.value })}
                   className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none"
@@ -750,7 +767,6 @@ export default function DashboardPage() {
                 <label className="block text-sm text-gray-400 mb-2">Website URL</label>
                 <input
                   type="url"
-                  required
                   value={businessForm.url}
                   onChange={(e) => setBusinessForm({ ...businessForm, url: e.target.value })}
                   placeholder="https://example.com"
@@ -766,14 +782,13 @@ export default function DashboardPage() {
 
               <div className="flex gap-3 pt-4">
                 <button
-                  type="button"
                   onClick={() => setShowCreateBusiness(false)}
                   className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
+                  onClick={handleCreateBusiness}
                   disabled={formLoading}
                   className="flex-1 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-sm font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
@@ -787,7 +802,7 @@ export default function DashboardPage() {
                   )}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

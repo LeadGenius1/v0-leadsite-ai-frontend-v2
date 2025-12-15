@@ -47,23 +47,13 @@ export default function NewBusinessPage() {
     }
 
     try {
-      // Map frontend fields to backend expected fields
-      const payload = {
-        name: formData.name,
-        url: formData.website,  // Backend expects 'url' not 'website'
-        industry: formData.industry,
-        target_location: formData.target_location,
-        target_business_type: formData.target_business_type,
-        description: formData.description,
-      }
-
       const response = await fetch(`${API_URL}/api/businesses`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(formData),
       })
 
       if (response.status === 401) {
@@ -72,13 +62,11 @@ export default function NewBusinessPage() {
         return
       }
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || data.message || "Failed to add business")
+        const data = await response.json()
+        throw new Error(data.message || "Failed to add business")
       }
 
-      // Success - redirect to dashboard
       router.push("/dashboard")
     } catch (err) {
       console.error("Failed to add business:", err)
