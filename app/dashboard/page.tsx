@@ -45,6 +45,10 @@ interface ProfileData {
   discovery_status: string // Added from existing code
   trial_end_date: string // Merged: Added trial_end_date from updates
   logo: string | null // Merged: Added logo from updates
+  street: string | null // Merged: Added street from updates
+  linkedin: string | null // Merged: Added linkedin from updates
+  twitter: string | null // Merged: Added twitter from updates
+  github: string | null // Merged: Added github from updates
 }
 
 interface UserData {
@@ -985,90 +989,278 @@ export default function DashboardPage() {
                   </div>
                 </section>
 
-                {/* Business Information Section */}
                 <section id="business" className="mb-16">
                   <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
                       Business
                     </span>{" "}
-                    Information
+                    Profile
                   </h2>
 
-                  <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
-                          Business Name
-                        </label>
-                        <p className="text-gray-200 text-sm">{profile.business_name}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Industry</label>
-                        <p className="text-gray-200 text-sm">{profile.industry}</p>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Website</label>
-                        <a
-                          href={profile.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 flex items-center gap-2 text-sm"
-                        >
-                          <Globe className="w-3 h-3" />
-                          {profile.website}
-                        </a>
-                      </div>
-                      {profile.description && (
-                        <div className="md:col-span-2">
+                  <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 space-y-6">
+                    {/* Company Details */}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wide">
+                        Company Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
                           <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
-                            Description
+                            Business Name
                           </label>
-                          <p className="text-gray-300 text-xs">{profile.description}</p>
+                          <p className="text-gray-200 text-sm">{profile.business_name}</p>
                         </div>
-                      )}
-                      <div className="md:col-span-2">
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
-                          Services Offered
-                        </label>
-                        <p className="text-gray-300 text-xs">{profile.services}</p>
-                      </div>
-                      {profile.unique_selling_points && (
+                        <div>
+                          <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Industry</label>
+                          <p className="text-gray-200 text-sm">{profile.industry}</p>
+                        </div>
                         <div className="md:col-span-2">
-                          <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
-                            Unique Selling Points
-                          </label>
-                          <p className="text-gray-300 text-xs">{profile.unique_selling_points}</p>
+                          <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Website</label>
+                          <a
+                            href={profile.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 flex items-center gap-2 text-sm"
+                          >
+                            <Globe className="w-3 h-3" />
+                            {profile.website}
+                          </a>
                         </div>
-                      )}
+                      </div>
                     </div>
+
+                    {/* Address */}
+                    {profile.address && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wide">
+                          Business Address
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="md:col-span-2">
+                            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Street</label>
+                            <p className="text-gray-200 text-sm">{profile.street}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">City</label>
+                            <p className="text-gray-200 text-sm">{profile.city}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">State</label>
+                            <p className="text-gray-200 text-sm">{profile.state}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Zip Code</label>
+                            <p className="text-gray-200 text-sm">{profile.zip}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contact Information */}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wide">
+                        Contact Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Email</label>
+                          <a href={`mailto:${profile.email}`} className="text-blue-400 hover:text-blue-300 text-sm">
+                            {profile.email}
+                          </a>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Phone</label>
+                          <p className="text-gray-200 text-sm">{profile.phone}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Social Media */}
+                    {(profile.linkedin || profile.twitter || profile.github) && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wide">Social Media</h3>
+                        <div className="flex gap-4">
+                          {profile.linkedin && (
+                            <a
+                              href={profile.linkedin}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
+                            >
+                              LinkedIn
+                            </a>
+                          )}
+                          {profile.twitter && (
+                            <a
+                              href={profile.twitter}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
+                            >
+                              Twitter
+                            </a>
+                          )}
+                          {profile.github && (
+                            <a
+                              href={profile.github}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
+                            >
+                              GitHub
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Services & Description */}
+                    {(profile.description || profile.services) && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wide">
+                          Services & Description
+                        </h3>
+                        {profile.description && (
+                          <div className="mb-4">
+                            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                              Description
+                            </label>
+                            <p className="text-gray-300 text-xs">{profile.description}</p>
+                          </div>
+                        )}
+                        {profile.services && (
+                          <div>
+                            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                              Services Offered
+                            </label>
+                            <p className="text-gray-300 text-xs">{profile.services}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </section>
 
-                {/* Targeting Section */}
                 <section id="targeting" className="mb-16">
                   <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                      Target
+                      Discovered
                     </span>{" "}
-                    Audience
+                    Prospects
                   </h2>
 
-                  <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
-                          Customer Type
-                        </label>
-                        <p className="text-gray-200 text-sm">{profile.target_customer_type}</p>
+                  {prospects.length === 0 ? (
+                    <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-8 text-center">
+                      <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center mx-auto mb-4">
+                        <Target className="w-8 h-8 text-gray-600" />
                       </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
-                          Target Location
-                        </label>
-                        <p className="text-gray-200 text-sm">{profile.target_location}</p>
-                      </div>
+                      <p className="text-gray-300 mb-2 text-sm">No prospects discovered yet</p>
+                      <p className="text-gray-500 text-xs">
+                        Click "Discover Prospects" above to find leads matching your business profile
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 overflow-hidden">
+                      {/* Prospects Header */}
+                      <div className="bg-black/20 p-4 border-b border-gray-800 flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-medium text-white">Found Prospects</h3>
+                          <p className="text-xs text-gray-400 mt-1">{prospects.length} leads ready for outreach</p>
+                        </div>
+                        <button
+                          onClick={() => setShowProspects(true)}
+                          className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded hover:bg-blue-500/30 transition-colors"
+                        >
+                          View All
+                        </button>
+                      </div>
+
+                      {/* Prospects Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-black/10 border-b border-gray-800">
+                            <tr>
+                              <th className="text-left py-3 px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">
+                                Company
+                              </th>
+                              <th className="text-left py-3 px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">
+                                Contact
+                              </th>
+                              <th className="text-left py-3 px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">
+                                Email
+                              </th>
+                              <th className="text-left py-3 px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">
+                                Status
+                              </th>
+                              <th className="text-left py-3 px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-800">
+                            {prospects.slice(0, 5).map((prospect) => (
+                              <tr key={prospect.id} className="hover:bg-white/5 transition-colors">
+                                <td className="py-3 px-4">
+                                  <p className="text-white text-sm font-medium truncate max-w-xs">
+                                    {prospect.company_name || "Unknown"}
+                                  </p>
+                                  {prospect.industry && (
+                                    <p className="text-gray-500 text-xs truncate">{prospect.industry}</p>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <p className="text-gray-300 text-sm truncate">{prospect.contact_name || "-"}</p>
+                                </td>
+                                <td className="py-3 px-4">
+                                  {prospect.contact_email ? (
+                                    <a
+                                      href={`mailto:${prospect.contact_email}`}
+                                      className="text-blue-400 hover:text-blue-300 text-xs truncate block max-w-xs"
+                                    >
+                                      {prospect.contact_email}
+                                    </a>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">No email</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span
+                                    className={`text-xs px-2 py-1 rounded-full ${
+                                      prospect.status === "new"
+                                        ? "bg-blue-500/20 text-blue-400"
+                                        : prospect.status === "contacted"
+                                          ? "bg-yellow-500/20 text-yellow-400"
+                                          : prospect.status === "interested"
+                                            ? "bg-green-500/20 text-green-400"
+                                            : "bg-gray-500/20 text-gray-400"
+                                    }`}
+                                  >
+                                    {prospect.status || "new"}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <button className="text-xs bg-purple-500/20 text-purple-400 px-3 py-1 rounded hover:bg-purple-500/30 transition-colors">
+                                    Email
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {prospects.length > 5 && (
+                        <div className="bg-black/10 p-4 text-center border-t border-gray-800">
+                          <button
+                            onClick={() => setShowProspects(true)}
+                            className="text-sm text-blue-400 hover:text-blue-300"
+                          >
+                            View all {prospects.length} prospects →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
 
                 {/* Contact Section */}
