@@ -34,14 +34,31 @@ export default function LoginPage() {
       }
 
       if (data.token) {
-        localStorage.setItem("sessionToken", data.token)
+        localStorage.setItem("token", data.token)
       }
       if (data.user?.customerId) {
         localStorage.setItem("customerId", data.user.customerId)
       }
 
-      // Redirect to dashboard
-      router.push("/dashboard")
+      // Check if user has completed onboarding
+      try {
+        const profileResponse = await fetch(`${API_BASE_URL}/api/profile`, {
+          headers: {
+            Authorization: `Bearer ${data.token}`,
+          },
+        })
+
+        if (!profileResponse.ok && profileResponse.status === 404) {
+          // No profile exists, redirect to onboarding
+          router.push("/onboarding")
+        } else {
+          // Profile exists, redirect to dashboard
+          router.push("/dashboard")
+        }
+      } catch (profileError) {
+        // If profile check fails, assume they need onboarding
+        router.push("/onboarding")
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
     } finally {

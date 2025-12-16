@@ -47,9 +47,7 @@ export default function SignupPage() {
 
       localStorage.setItem("token", data.token)
       setSuccess(true)
-      setTimeout(() => {
-        router.push("/onboarding")
-      }, 2000)
+      router.push("/onboarding")
     } catch (err) {
       if (err instanceof TypeError && err.message.includes("fetch")) {
         setError(`Network error: ${err.message}`)
