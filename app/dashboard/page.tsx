@@ -6,7 +6,22 @@ import { useRef } from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, Building2, Target, Mail, MapPin, Phone, Globe, Loader2, X, Search, Sparkles, Send } from "lucide-react"
+import {
+  LogOut,
+  Building2,
+  Target,
+  Mail,
+  MapPin,
+  Phone,
+  Globe,
+  Loader2,
+  X,
+  Search,
+  Sparkles,
+  Send,
+  Settings,
+  Zap,
+} from "lucide-react" // Merged: Added Settings icon and Zap icon
 
 interface ProfileData {
   id: string
@@ -29,6 +44,7 @@ interface ProfileData {
   created_at: string
   analysis_status: string // Added from existing code
   discovery_status: string // Added from existing code
+  trial_end_date: string // Merged: Added trial_end_date from updates
 }
 
 interface UserData {
@@ -81,6 +97,8 @@ const INDUSTRIES = [
   "Other",
 ]
 
+const API_BASE_URL = "https://api.leadsite.ai" // Merged: Defined API_BASE_URL
+
 export default function DashboardPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<ProfileData | null>(null) // Merged: ProfileData interface is now more comprehensive
@@ -115,6 +133,15 @@ export default function DashboardPage() {
   const [actionStatus, setActionStatus] = useState<string | null>(null)
   const [stats, setStats] = useState({ prospects: 0, campaigns: 0, emails: 0 })
 
+  // Merged: Added activeSection state and schedule state
+  const [activeSection, setActiveSection] = useState("dashboard")
+  const [schedule, setSchedule] = useState({
+    auto_discover_enabled: false,
+    daily_prospect_limit: 50,
+    run_time: "02:00",
+  })
+  const [savingSchedule, setSavingSchedule] = useState(false)
+
   useEffect(() => {
     if (businesses.length === 1 && !selectedBusinessId) {
       setSelectedBusinessId(businesses[0].id)
@@ -130,7 +157,8 @@ export default function DashboardPage() {
         return null
       }
 
-      const response = await fetch(`https://api.leadsite.ai${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        // Merged: Used API_BASE_URL
         method,
         headers: {
           "Content-Type": "application/json",
@@ -169,62 +197,72 @@ export default function DashboardPage() {
     }
 
     async function loadDashboard() {
+      console.log("[v0] === DASHBOARD LOAD START ===") // Merged: Logging from updates
+      const token = localStorage.getItem("token")
+
+      if (!token) {
+        console.log("[v0] No token found, redirecting to login")
+        router.push("/login")
+        return
+      }
+
       try {
-        setLoading(true)
+        // Get profile
+        const profileRes = await fetch(`${API_BASE_URL}/api/profile`, {
+          // Merged: Used API_BASE_URL and fetch
+          headers: { Authorization: `Bearer ${token}` },
+        })
 
-        // Merged: Fetch user data and profile data using callApi helper
-        const userData = await callApi("GET", "/api/dashboard")
-        if (!userData) return
+        console.log("[v0] Profile response status:", profileRes.status)
 
-        console.log("[Dashboard] Dashboard data loaded:", userData)
-        setUser(userData)
-        localStorage.setItem("customerId", userData.customerId)
+        if (profileRes.status === 401) {
+          console.log("[v0] 401 Unauthorized - redirecting to login")
+          localStorage.removeItem("token")
+          router.push("/login")
+          return
+        }
 
-        let profileData
-        try {
-          profileData = await callApi("GET", "/api/profile")
-          console.log("[Dashboard] Profile data loaded:", profileData)
-          setProfile(profileData?.profile)
-        } catch (profileErr: any) {
-          // If profile doesn't exist (404), redirect to onboarding
-          if (profileErr.message.includes("404") || profileErr.message.includes("not found")) {
-            console.log("[Dashboard] No profile found, redirecting to onboarding")
-            router.push("/onboarding")
-            return
+        if (!profileRes.ok) {
+          throw new Error("Failed to load profile")
+        }
+
+        const profileData = await profileRes.json()
+        console.log("[v0] Profile data loaded:", profileData)
+
+        if (!profileData.profile) {
+          console.log("[v0] No profile found, redirecting to onboarding")
+          router.push("/onboarding")
+          return
+        }
+
+        setProfile(profileData.profile)
+
+        // Calculate trial days left
+        if (profileData.profile.trial_end_date) {
+          // Merged: Using trial_end_date from updates
+          const endDate = new Date(profileData.profile.trial_end_date)
+          const today = new Date()
+          const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          setTrialDaysLeft(Math.max(0, daysLeft))
+        }
+
+        // Fetch schedule settings // Merged: Fetch schedule settings
+        const scheduleRes = await fetch(`${API_BASE_URL}/api/schedule`, {
+          // Merged: Used API_BASE_URL
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (scheduleRes.ok) {
+          const scheduleData = await scheduleRes.json()
+          if (scheduleData.exists) {
+            setSchedule(scheduleData.schedule)
           }
         }
 
-        // Calculate trial days
-        const trialEnd = new Date(userData.trial_ends_at)
-        const today = new Date()
-        const daysLeft = Math.ceil((trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        setTrialDaysLeft(Math.max(0, daysLeft))
-
-        const businessFromProfile = profileData?.profile
-          ? {
-              id: profileData.profile.id,
-              name: profileData.profile.business_name,
-              industry: profileData.profile.industry,
-              url: profileData.profile.website,
-              customer_id: userData.customerId,
-              analysis_status: profileData.profile.analysis_status || "pending",
-              discovery_status: profileData.profile.discovery_status || "pending",
-              created_at: profileData.profile.created_at,
-            }
-          : null
-
-        console.log("[Dashboard] Business from profile:", businessFromProfile)
-
-        const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${userData.customerId}`)
-        console.log("[Dashboard] Campaigns:", campaignsData)
-
-        setBusinesses(businessFromProfile ? [businessFromProfile] : [])
-        setCampaigns(campaignsData?.campaigns || [])
-        setError(null)
-      } catch (err: any) {
-        console.error("[Dashboard] Dashboard load failed:", err)
+        setLoading(false)
+      } catch (err) {
+        console.error("[v0] Error loading dashboard:", err)
         setError("Failed to load dashboard data")
-      } finally {
         setLoading(false)
       }
     }
@@ -673,6 +711,33 @@ export default function DashboardPage() {
     router.push("/")
   } // Merged: Added logout logic here
 
+  // Merged: Added save schedule handler
+  const handleSaveSchedule = async () => {
+    setSavingSchedule(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_BASE_URL}/api/schedule`, {
+        // Merged: Used API_BASE_URL
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(schedule),
+      })
+      const data = await response.json()
+      if (data.success) {
+        setActionStatus("✓ Schedule settings saved!")
+        setTimeout(() => setActionStatus(null), 3000)
+      }
+    } catch (err) {
+      setActionStatus("✗ Failed to save schedule")
+      setTimeout(() => setActionStatus(null), 3000)
+    } finally {
+      setSavingSchedule(false)
+    }
+  }
+
   if (loading) {
     return (
       // Merged: Spline 3D background and dark overlay
@@ -728,9 +793,17 @@ export default function DashboardPage() {
           <nav className="p-6">
             <ul className="space-y-2">
               <li>
-                <a href="#business" className="flex items-center text-blue-400 py-2 px-3 rounded-md bg-blue-500/10">
+                <a
+                  href="#dashboard"
+                  onClick={() => setActiveSection("dashboard")} // Merged: onClick handler for active section
+                  className={`flex items-center py-2 px-3 rounded-md transition-colors ${
+                    activeSection === "dashboard"
+                      ? "text-blue-400 bg-blue-500/10"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
                   <Building2 className="w-5 h-5 mr-3" />
-                  Business Info
+                  Dashboard
                 </a>
               </li>
               <li>
@@ -749,6 +822,20 @@ export default function DashboardPage() {
                 >
                   <Mail className="w-5 h-5 mr-3" />
                   Contact
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#settings"
+                  onClick={() => setActiveSection("settings")} // Merged: onClick handler for active section
+                  className={`flex items-center py-2 px-3 rounded-md transition-colors ${
+                    activeSection === "settings"
+                      ? "text-blue-400 bg-blue-500/10"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <Settings className="w-5 h-5 mr-3" /> {/* Merged: Settings icon */}
+                  Settings
                 </a>
               </li>
             </ul>
@@ -782,210 +869,331 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="w-full md:w-2/3 lg:w-3/4 p-6 md:p-10 overflow-y-auto">
-          {actionStatus && (
-            <div
-              className={`mb-6 p-4 rounded-xl border ${
-                actionStatus.startsWith("✓")
-                  ? "bg-green-500/10 border-green-500/30 text-green-400"
-                  : actionStatus.startsWith("⚠")
-                    ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-                    : "bg-red-500/10 border-red-500/30 text-red-400"
-              }`}
-            >
-              {actionStatus}
-            </div>
-          )}
-
-          <section className="mb-16">
-            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-                AI-Powered
-              </span>{" "}
-              Actions
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Discover Prospects Card */}
-              <div
-                onClick={!isDiscovering ? handleDiscoverProspects : undefined}
-                className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
-                  isDiscovering ? "opacity-50 cursor-wait" : "hover:border-blue-500/50"
-                }`}
-              >
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  {isDiscovering ? (
-                    <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Search className="w-7 h-7 text-blue-400" />
-                  )}
-                </div>
-                <h3 className="text-lg font-normal text-white mb-2">
-                  {isDiscovering ? "Discovering..." : "Discover Prospects"}
-                </h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Find businesses matching your target customer profile using AI-powered search.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Google Maps</span>
-                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Apollo.io</span>
-                </div>
-              </div>
-
-              {/* Generate Emails Card */}
-              <div
-                onClick={!isAnalyzing ? handleGenerateEmails : undefined}
-                className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
-                  isAnalyzing ? "opacity-50 cursor-wait" : "hover:border-purple-500/50"
-                }`}
-              >
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  {isAnalyzing ? (
-                    <div className="w-7 h-7 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Sparkles className="w-7 h-7 text-purple-400" />
-                  )}
-                </div>
-                <h3 className="text-lg font-normal text-white mb-2">
-                  {isAnalyzing ? "Generating..." : "Generate Emails"}
-                </h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Create personalized outreach emails using GPT-4 based on your business profile.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">GPT-4</span>
-                  <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">Personalized</span>
-                </div>
-              </div>
-
-              {/* Send Campaign Card */}
-              <div
-                onClick={!isSending ? handleSendCampaign : undefined}
-                className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
-                  isSending ? "opacity-50 cursor-wait" : "hover:border-cyan-500/50"
-                }`}
-              >
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  {isSending ? (
-                    <div className="w-7 h-7 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Send className="w-7 h-7 text-cyan-400" />
-                  )}
-                </div>
-                <h3 className="text-lg font-normal text-white mb-2">{isSending ? "Sending..." : "Send Campaign"}</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Launch your email campaign and track opens, clicks, and replies in real-time.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded">SendGrid</span>
-                  <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded">Tracking</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Business Information Section */}
-          <section id="business" className="mb-16">
-            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">Business</span>{" "}
-              Information
-            </h2>
-
-            <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Business Name</label>
-                  <p className="text-gray-200">{profile.business_name}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Industry</label>
-                  <p className="text-gray-200">{profile.industry}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Website</label>
-                  <a
-                    href={profile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 flex items-center gap-2"
+        <div className="flex-1 overflow-y-auto">
+          {" "}
+          {/* Merged: Changed from w-full md:w-2/3 lg:w-3/4 to flex-1 */}
+          <div className="p-6 md:p-10 max-w-5xl">
+            {" "}
+            {/* Merged: Added max-w-5xl */}
+            {activeSection === "dashboard" && (
+              <>
+                {/* Action Status Banner */}
+                {actionStatus && (
+                  <div
+                    className={`mb-6 p-4 rounded-xl border ${
+                      actionStatus.startsWith("✓")
+                        ? "bg-green-500/10 border-green-500/30 text-green-400"
+                        : actionStatus.startsWith("⚠")
+                          ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                          : "bg-red-500/10 border-red-500/30 text-red-400"
+                    }`}
                   >
-                    <Globe className="w-4 h-4" />
-                    {profile.website}
-                  </a>
-                </div>
-                {profile.description && (
-                  <div className="md:col-span-2">
-                    <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Description</label>
-                    <p className="text-gray-300 text-sm">{profile.description}</p>
+                    {actionStatus}
                   </div>
                 )}
-                <div className="md:col-span-2">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Services Offered</label>
-                  <p className="text-gray-300 text-sm">{profile.services}</p>
-                </div>
-                {profile.unique_selling_points && (
-                  <div className="md:col-span-2">
-                    <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
-                      Unique Selling Points
-                    </label>
-                    <p className="text-gray-300 text-sm">{profile.unique_selling_points}</p>
+
+                <section className="mb-16">
+                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+                      AI-Powered
+                    </span>{" "}
+                    Actions
+                  </h2>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Discover Prospects Card */}
+                    <div
+                      onClick={!isDiscovering ? handleDiscoverProspects : undefined}
+                      className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
+                        isDiscovering ? "opacity-50 cursor-wait" : "hover:border-blue-500/50"
+                      }`}
+                    >
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        {isDiscovering ? (
+                          <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Search className="w-7 h-7 text-blue-400" />
+                        )}
+                      </div>
+                      <h3 className="text-lg font-normal text-white mb-2">
+                        {isDiscovering ? "Discovering..." : "Discover Prospects"}
+                      </h3>
+                      <p className="text-gray-400 text-sm mb-4">
+                        Find businesses matching your target customer profile using AI-powered search.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Google Maps</span>
+                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Apollo.io</span>
+                      </div>
+                    </div>
+
+                    {/* Generate Emails Card */}
+                    <div
+                      onClick={!isAnalyzing ? handleGenerateEmails : undefined}
+                      className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
+                        isAnalyzing ? "opacity-50 cursor-wait" : "hover:border-purple-500/50"
+                      }`}
+                    >
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        {isAnalyzing ? (
+                          <div className="w-7 h-7 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Sparkles className="w-7 h-7 text-purple-400" />
+                        )}
+                      </div>
+                      <h3 className="text-lg font-normal text-white mb-2">
+                        {isAnalyzing ? "Generating..." : "Generate Emails"}
+                      </h3>
+                      <p className="text-gray-400 text-sm mb-4">
+                        Create personalized outreach emails using GPT-4 based on your business profile.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">GPT-4</span>
+                        <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">Personalized</span>
+                      </div>
+                    </div>
+
+                    {/* Send Campaign Card */}
+                    <div
+                      onClick={!isSending ? handleSendCampaign : undefined}
+                      className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
+                        isSending ? "opacity-50 cursor-wait" : "hover:border-cyan-500/50"
+                      }`}
+                    >
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        {isSending ? (
+                          <div className="w-7 h-7 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Send className="w-7 h-7 text-cyan-400" />
+                        )}
+                      </div>
+                      <h3 className="text-lg font-normal text-white mb-2">
+                        {isSending ? "Sending..." : "Send Campaign"}
+                      </h3>
+                      <p className="text-gray-400 text-sm mb-4">
+                        Launch your email campaign and track opens, clicks, and replies in real-time.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded">SendGrid</span>
+                        <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded">Tracking</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-          </section>
+                </section>
 
-          {/* Targeting Section */}
-          <section id="targeting" className="mb-16">
-            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">Target</span>{" "}
-              Audience
-            </h2>
+                {/* Business Information Section */}
+                <section id="business" className="mb-16">
+                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
+                      Business
+                    </span>{" "}
+                    Information
+                  </h2>
 
-            <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Customer Type</label>
-                  <p className="text-gray-200">{profile.target_customer_type}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Target Location</label>
-                  <p className="text-gray-200">{profile.target_location}</p>
-                </div>
-              </div>
-            </div>
-          </section>
+                  <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                          Business Name
+                        </label>
+                        <p className="text-gray-200">{profile.business_name}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Industry</label>
+                        <p className="text-gray-200">{profile.industry}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Website</label>
+                        <a
+                          href={profile.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 flex items-center gap-2"
+                        >
+                          <Globe className="w-4 h-4" />
+                          {profile.website}
+                        </a>
+                      </div>
+                      {profile.description && (
+                        <div className="md:col-span-2">
+                          <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                            Description
+                          </label>
+                          <p className="text-gray-300 text-sm">{profile.description}</p>
+                        </div>
+                      )}
+                      <div className="md:col-span-2">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                          Services Offered
+                        </label>
+                        <p className="text-gray-300 text-sm">{profile.services}</p>
+                      </div>
+                      {profile.unique_selling_points && (
+                        <div className="md:col-span-2">
+                          <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                            Unique Selling Points
+                          </label>
+                          <p className="text-gray-300 text-sm">{profile.unique_selling_points}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
 
-          {/* Contact Section */}
-          <section id="contact" className="mb-16">
-            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">Contact</span>{" "}
-              Details
-            </h2>
+                {/* Targeting Section */}
+                <section id="targeting" className="mb-16">
+                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                      Target
+                    </span>{" "}
+                    Audience
+                  </h2>
 
-            <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Full Address</label>
-                  <p className="text-gray-200">{profile.address}</p>
+                  <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                          Customer Type
+                        </label>
+                        <p className="text-gray-200">{profile.target_customer_type}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                          Target Location
+                        </label>
+                        <p className="text-gray-200">{profile.target_location}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Contact Section */}
+                <section id="contact" className="mb-16">
+                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">
+                      Contact
+                    </span>{" "}
+                    Details
+                  </h2>
+
+                  <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Full Address</label>
+                        <p className="text-gray-200">{profile.address}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Email</label>
+                        <p className="text-gray-200">{profile.email}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Phone</label>
+                        <p className="text-gray-200">{profile.phone}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Location</label>
+                        <p className="text-gray-200">
+                          {profile.city}, {profile.state} {profile.zip}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
+            {activeSection === "settings" && (
+              <section className="mb-10">
+                <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
+                    Auto-Discovery
+                  </span>{" "}
+                  Settings
+                </h2>
+
+                <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
+                  {/* Enable Toggle */}
+                  <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-800">
+                    <div>
+                      <h3 className="text-lg font-normal text-white mb-1">Nightly Prospect Discovery</h3>
+                      <p className="text-gray-400 text-sm">Automatically find new prospects every night</p>
+                    </div>
+                    <button
+                      onClick={() => setSchedule((s) => ({ ...s, auto_discover_enabled: !s.auto_discover_enabled }))}
+                      className={`w-14 h-8 rounded-full transition-colors relative ${
+                        schedule.auto_discover_enabled ? "bg-blue-500" : "bg-gray-700"
+                      }`}
+                    >
+                      <div
+                        className={`absolute w-6 h-6 bg-white rounded-full top-1 transition-all ${
+                          schedule.auto_discover_enabled ? "right-1" : "left-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Prospects Per Night */}
+                  <div className="mb-6">
+                    <label className="block text-sm text-gray-400 mb-2">Prospects per night</label>
+                    <select
+                      value={schedule.daily_prospect_limit}
+                      onChange={(e) =>
+                        setSchedule((s) => ({ ...s, daily_prospect_limit: Number.parseInt(e.target.value) }))
+                      }
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value={25}>25 prospects</option>
+                      <option value={50}>50 prospects</option>
+                      <option value={100}>100 prospects</option>
+                      <option value={200}>200 prospects (Premium)</option>
+                    </select>
+                    <p className="text-gray-500 text-xs mt-2">Free plan: 50/night • Pro plan: 200/night</p>
+                  </div>
+
+                  {/* Run Time */}
+                  <div className="mb-6">
+                    <label className="block text-sm text-gray-400 mb-2">Run at (EST)</label>
+                    <select
+                      value={schedule.run_time}
+                      onChange={(e) => setSchedule((s) => ({ ...s, run_time: e.target.value }))}
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="00:00">12:00 AM (Midnight)</option>
+                      <option value="01:00">1:00 AM</option>
+                      <option value="02:00">2:00 AM</option>
+                      <option value="03:00">3:00 AM</option>
+                      <option value="04:00">4:00 AM</option>
+                      <option value="05:00">5:00 AM</option>
+                    </select>
+                  </div>
+
+                  {/* Save Button */}
+                  <button
+                    onClick={handleSaveSchedule}
+                    disabled={savingSchedule}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg text-white font-normal hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {savingSchedule ? "Saving..." : "Save Schedule Settings"}
+                  </button>
+
+                  {/* Info Box */}
+                  <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                    <div className="flex items-start">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center mr-3 flex-shrink-0">
+                        <Zap className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-blue-400 font-normal mb-1">How it works</p>
+                        <p className="text-gray-400 text-sm">
+                          Our AI will search Google Maps and Apollo.io every night to find businesses matching your
+                          target profile. New prospects appear in your dashboard each morning, ready for outreach.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Email</label>
-                  <p className="text-gray-200">{profile.email}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Phone</label>
-                  <p className="text-gray-200">{profile.phone}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Location</label>
-                  <p className="text-gray-200">
-                    {profile.city}, {profile.state} {profile.zip}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+              </section>
+            )}
+          </div>
         </div>
       </div>
 
