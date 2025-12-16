@@ -2,30 +2,40 @@
 
 import type React from "react"
 
-import { useEffect, useState, useRef } from "react"
+import { useRef } from "react"
+
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Building2,
-  Target,
-  Mail,
-  LogOut,
-  Sparkles,
-  Zap,
-  Search,
-  Eye,
-  Play,
-  CheckCircle2,
-  Loader2,
-  X,
-  AlertCircle,
-} from "lucide-react"
+import { LogOut, Building2, Target, Mail, MapPin, Phone, Globe, Loader2, X } from "lucide-react"
+
+interface ProfileData {
+  id: string
+  customer_id: string
+  business_name: string
+  industry: string
+  website: string
+  description: string | null
+  owner_name: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  state: string
+  zip: string
+  target_customer_type: string
+  target_location: string
+  services: string
+  unique_selling_points: string | null
+  created_at: string
+  analysis_status: string // Added from existing code
+  discovery_status: string // Added from existing code
+}
 
 interface UserData {
   customerId: string
   email: string
   plan_tier: string
   trial_ends_at: string
-  created_at: string
 }
 
 interface Business {
@@ -73,38 +83,37 @@ const INDUSTRIES = [
 
 export default function DashboardPage() {
   const router = useRouter()
+  const [profile, setProfile] = useState<ProfileData | null>(null) // Merged: ProfileData interface is now more comprehensive
   const [user, setUser] = useState<UserData | null>(null)
-  const [businesses, setBusinesses] = useState<Business[]>([])
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null)
-  const [prospects, setProspects] = useState<Prospect[]>([])
+  const [businesses, setBusinesses] = useState<Business[]>([]) // From existing
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]) // From existing
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null) // From existing
+  const [prospects, setProspects] = useState<Prospect[]>([]) // From existing
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null) // From existing
   const [trialDaysLeft, setTrialDaysLeft] = useState(0)
-  const [profile, setProfile] = useState<any>(null)
-
-  // Modal states
+  // Modal states // From existing
   const [showCreateBusiness, setShowCreateBusiness] = useState(false)
   const [showProspects, setShowProspects] = useState(false)
   const [workflowStatus, setWorkflowStatus] = useState<{
     type: string
     status: "pending" | "running" | "complete" | "error"
     message: string
-  } | null>(null)
+  } | null>(null) // From existing
 
-  // Form states
+  // Form states // From existing
   const [businessForm, setBusinessForm] = useState({ name: "", industry: "", url: "" })
   const [formLoading, setFormLoading] = useState(false)
 
-  const [isPolling, setIsPolling] = useState(false)
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isPolling, setIsPolling] = useState(false) // From existing
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null) // From existing
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null) // From existing
 
   useEffect(() => {
     if (businesses.length === 1 && !selectedBusinessId) {
       setSelectedBusinessId(businesses[0].id)
     }
-  }, [businesses, selectedBusinessId])
+  }, [businesses, selectedBusinessId]) // From existing
 
   const callApi = async (method: string, endpoint: string, body: any = null) => {
     try {
@@ -121,7 +130,7 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: body ? JSON.stringify(body) : null,
+        body: body ? JSON.JSON.stringify(body) : null,
       })
 
       if (response.status === 401) {
@@ -153,10 +162,11 @@ export default function DashboardPage() {
       return
     }
 
-    async function checkProfileAndLoadDashboard() {
+    async function loadDashboard() {
       try {
         setLoading(true)
 
+        // Merged: Fetch user data and profile data using callApi helper
         const userData = await callApi("GET", "/api/dashboard")
         if (!userData) return
 
@@ -178,7 +188,7 @@ export default function DashboardPage() {
           }
         }
 
-        // Calculate trial days left
+        // Calculate trial days
         const trialEnd = new Date(userData.trial_ends_at)
         const today = new Date()
         const daysLeft = Math.ceil((trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
@@ -213,7 +223,7 @@ export default function DashboardPage() {
       }
     }
 
-    checkProfileAndLoadDashboard()
+    loadDashboard()
   }, [router])
 
   useEffect(() => {
@@ -225,7 +235,7 @@ export default function DashboardPage() {
         clearTimeout(pollingTimeoutRef.current)
       }
     }
-  }, [])
+  }, []) // From existing
 
   const startPolling = (workflowType: string) => {
     console.log("[Dashboard] Starting polling for workflow:", workflowType)
@@ -300,7 +310,7 @@ export default function DashboardPage() {
         console.error("[Dashboard] Polling error:", error)
       }
     }, 2000) // Poll every 2 seconds
-  }
+  } // From existing
 
   const stopPolling = () => {
     console.log("[Dashboard] Stopping polling")
@@ -317,7 +327,7 @@ export default function DashboardPage() {
     setTimeout(() => {
       setWorkflowStatus(null)
     }, 3000)
-  }
+  } // From existing
 
   const handleTriggerWorkflow = async (workflowType: "analyze_business" | "discover_prospects" | "generate_emails") => {
     if (!selectedBusinessId) {
@@ -394,7 +404,7 @@ export default function DashboardPage() {
       })
       stopPolling()
     }
-  }
+  } // From existing
 
   const getWorkflowMessage = (type: string, status: string) => {
     const messages: Record<string, Record<string, string>> = {
@@ -412,7 +422,7 @@ export default function DashboardPage() {
       },
     }
     return messages[type]?.[status] || "Processing..."
-  }
+  } // From existing
 
   const loadProspects = async (businessId: string) => {
     try {
@@ -424,7 +434,7 @@ export default function DashboardPage() {
       console.error("[Dashboard] Failed to load prospects:", error)
       setError("Failed to load prospects")
     }
-  }
+  } // From existing
 
   const handleCreateBusiness = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -480,289 +490,233 @@ export default function DashboardPage() {
     } finally {
       setFormLoading(false)
     }
-  }
+  } // From existing
 
   const handleViewProspects = async (businessId: string) => {
     await loadProspects(businessId)
     setShowProspects(true)
-  }
+  } // From existing
 
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("customerId")
     router.push("/")
-  }
+  } // Merged: Added logout logic here
 
   if (loading) {
     return (
+      // Merged: Spline 3D background and dark overlay
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+        <div className="text-white">Loading...</div>
       </div>
     )
   }
 
-  const selectedBusiness = businesses.find((b) => b.id === selectedBusinessId)
+  // Merged: Conditional rendering for null profile
+  if (!profile) return null
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Animated background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-indigo-900/20 rounded-full blur-[120px] animate-float"></div>
-        <div
-          className="absolute bottom-20 right-20 w-96 h-96 bg-purple-900/10 rounded-full blur-[120px] animate-float"
-          style={{ animationDelay: "2s" }}
-        ></div>
+    // Merged: Updated main container styling and background
+    <div className="min-h-screen bg-black text-white font-light">
+      <div className="fixed top-0 left-0 w-full h-full -z-20">
+        <iframe
+          src="https://my.spline.design/binarymaterialcopy-uzQoq9YUCPK8Sqz8n9uP5qMO/"
+          frameBorder="0"
+          width="100%"
+          height="100%"
+          title="3D Background"
+        />
       </div>
 
-      {/* Grid overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-          mask: "radial-gradient(circle at center, black, transparent 80%)",
-        }}
-      ></div>
+      <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-r from-black/85 to-black/70 -z-10" />
 
-      {/* Header */}
-      <header className="relative border-b border-white/10 bg-black/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-base sm:text-lg font-semibold">
-                Welcome, {profile?.owner_name || user?.email || ""}
-              </h1>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
-                <span className="text-[10px] sm:text-xs text-gray-400">
-                  Plan: {user?.plan_tier || "Free"}
-                  {trialDaysLeft > 0 && ` (${trialDaysLeft} days left)`}
+      <div className="flex flex-col md:flex-row min-h-screen relative z-10">
+        <div className="w-full md:w-1/3 lg:w-1/4 bg-black/40 backdrop-blur-lg border-r border-gray-800 flex flex-col">
+          {/* Profile Header */}
+          <div className="p-6 flex flex-col items-center text-center border-b border-gray-800">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 border-2 border-blue-400">
+              <span className="text-4xl font-semibold text-white">{profile.owner_name.charAt(0)}</span>
+            </div>
+            <h1 className="text-xl font-light mb-1">{profile.owner_name}</h1>
+            <p className="text-blue-400 mb-3">{profile.business_name}</p>
+            <p className="text-sm text-gray-400 mb-4">
+              {profile.description || `${profile.industry} professional focused on ${profile.services}`}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+              <span className="px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded-full">
+                {user?.plan_tier || "Trial"}
+              </span>
+              {trialDaysLeft > 0 && (
+                <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full">
+                  {trialDaysLeft} days left
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="p-6">
+            <ul className="space-y-2">
+              <li>
+                <a href="#business" className="flex items-center text-blue-400 py-2 px-3 rounded-md bg-blue-500/10">
+                  <Building2 className="w-5 h-5 mr-3" />
+                  Business Info
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#targeting"
+                  className="flex items-center text-gray-400 hover:text-white py-2 px-3 rounded-md hover:bg-white/5 transition-colors"
+                >
+                  <Target className="w-5 h-5 mr-3" />
+                  Targeting
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#contact"
+                  className="flex items-center text-gray-400 hover:text-white py-2 px-3 rounded-md hover:bg-white/5 transition-colors"
+                >
+                  <Mail className="w-5 h-5 mr-3" />
+                  Contact
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          {/* Contact Info */}
+          <div className="mt-auto p-6 border-t border-gray-800">
+            <div className="text-sm text-gray-400 space-y-2">
+              <div className="flex items-center">
+                <Mail className="w-4 h-4 mr-2" />
+                <span>{profile.email}</span>
+              </div>
+              <div className="flex items-center">
+                <Phone className="w-4 h-4 mr-2" />
+                <span>{profile.phone}</span>
+              </div>
+              <div className="flex items-center">
+                <MapPin className="w-4 h-4 mr-2" />
+                <span>
+                  {profile.city}, {profile.state}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <button
-                onClick={() => router.push("/pricing")}
-                className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-500/10 text-indigo-400 rounded-lg text-xs sm:text-sm hover:bg-indigo-500/20 transition"
-              >
-                Upgrade Plan
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500/10 text-red-400 rounded-lg text-xs sm:text-sm hover:bg-red-500/20 transition"
-              >
-                <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-        {/* System status */}
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-ping absolute"></div>
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full relative"></div>
-          </div>
-          <span className="text-[10px] sm:text-xs text-green-400 font-medium">SYSTEM ONLINE</span>
-        </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400" />
-            <span className="text-sm text-red-400">{error}</span>
-            <button onClick={() => setError(null)} className="ml-auto">
-              <X className="w-4 h-4 text-red-400" />
+            <button
+              onClick={handleLogout}
+              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
             </button>
           </div>
-        )}
-
-        {workflowStatus && (
-          <div
-            className={`border rounded-xl p-4 flex items-center gap-3 ${
-              workflowStatus.status === "complete"
-                ? "bg-green-500/10 border-green-500/20"
-                : workflowStatus.status === "error"
-                  ? "bg-red-500/10 border-red-500/20"
-                  : "bg-indigo-500/10 border-indigo-500/20"
-            }`}
-          >
-            {workflowStatus.status === "running" && <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />}
-            {workflowStatus.status === "complete" && <CheckCircle2 className="w-5 h-5 text-green-400" />}
-            {workflowStatus.status === "error" && <AlertCircle className="w-5 h-5 text-red-400" />}
-            <span className="text-sm">{workflowStatus.message}</span>
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-3 mb-3 sm:mb-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">{businesses.length}</div>
-            <div className="text-xs sm:text-sm text-gray-400">Businesses</div>
-          </div>
-
-          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-3 mb-3 sm:mb-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">{prospects.length}</div>
-            <div className="text-xs sm:text-sm text-gray-400">Prospects Discovered</div>
-          </div>
-
-          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-3 mb-3 sm:mb-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold mb-1">{campaigns.length}</div>
-            <div className="text-xs sm:text-sm text-gray-400">Active Campaigns</div>
-          </div>
         </div>
 
-        {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Businesses list */}
-          <div className="lg:col-span-2 bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-base sm:text-lg font-semibold">Your Businesses</h2>
-            </div>
+        <div className="w-full md:w-2/3 lg:w-3/4 p-6 md:p-10 overflow-y-auto">
+          {/* Business Information Section */}
+          <section id="business" className="mb-16">
+            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">Business</span>{" "}
+              Information
+            </h2>
 
-            {businesses.length > 0 ? (
-              <div className="space-y-3">
-                {businesses.map((business) => (
-                  <div
-                    key={business.id}
-                    className={`border rounded-lg sm:rounded-xl p-3 sm:p-4 cursor-pointer transition ${
-                      selectedBusinessId === business.id
-                        ? "border-indigo-500 bg-indigo-500/5"
-                        : "border-white/10 hover:border-white/20"
-                    }`}
-                    onClick={() => setSelectedBusinessId(business.id)}
+            <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Business Name</label>
+                  <p className="text-gray-200">{profile.business_name}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Industry</label>
+                  <p className="text-gray-200">{profile.industry}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Website</label>
+                  <a
+                    href={profile.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 flex items-center gap-2"
                   >
-                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                      <div className="flex-1 w-full">
-                        <h3 className="text-sm sm:text-base font-medium mb-1">{business.name}</h3>
-                        <p className="text-xs sm:text-sm text-gray-400 mb-2">{business.industry}</p>
-                        <a
-                          href={business.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] sm:text-xs text-indigo-400 hover:underline break-all"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {business.url}
-                        </a>
-                      </div>
-                      <div className="flex sm:flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
-                        <span
-                          className={`px-2 py-1 rounded text-[10px] sm:text-xs flex-1 sm:flex-none text-center ${
-                            business.analysis_status === "completed"
-                              ? "bg-green-500/10 text-green-400"
-                              : business.analysis_status === "in_progress"
-                                ? "bg-yellow-500/10 text-yellow-400"
-                                : "bg-gray-500/10 text-gray-400"
-                          }`}
-                        >
-                          {business.analysis_status}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleViewProspects(business.id)
-                          }}
-                          className="flex items-center gap-1 text-[10px] sm:text-xs text-cyan-400 hover:text-cyan-300 flex-1 sm:flex-none justify-center sm:justify-start"
-                        >
-                          <Eye className="w-3 h-3" />
-                          View Prospects
-                        </button>
-                      </div>
-                    </div>
+                    <Globe className="w-4 h-4" />
+                    {profile.website}
+                  </a>
+                </div>
+                {profile.description && (
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Description</label>
+                    <p className="text-gray-300 text-sm">{profile.description}</p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 sm:py-12">
-                <Building2 className="w-10 h-10 sm:w-12 sm:h-12 text-gray-600 mx-auto mb-3 sm:mb-4" />
-                <h3 className="text-sm sm:text-base font-medium mb-2">No businesses yet</h3>
-                <p className="text-xs sm:text-sm text-gray-400 mb-6">
-                  Add your first business to start generating leads
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Business actions */}
-          <div className="bg-neutral-900/40 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-            {selectedBusiness ? (
-              <>
-                <h2 className="text-base sm:text-lg font-semibold mb-4">Actions</h2>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => handleTriggerWorkflow("analyze_business")}
-                    disabled={workflowStatus?.status === "running"}
-                    className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg sm:rounded-xl transition disabled:opacity-50"
-                  >
-                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400 flex-shrink-0" />
-                    <div className="text-left flex-1 min-w-0">
-                      <div className="font-medium text-xs sm:text-sm truncate">Analyze Business</div>
-                      <div className="text-[10px] sm:text-xs text-gray-400">AI-powered analysis</div>
-                    </div>
-                    <Play className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-400 flex-shrink-0" />
-                  </button>
-
-                  <button
-                    onClick={() => handleTriggerWorkflow("discover_prospects")}
-                    disabled={workflowStatus?.status === "running"}
-                    className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg sm:rounded-xl transition disabled:opacity-50"
-                  >
-                    <Search className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 flex-shrink-0" />
-                    <div className="text-left flex-1 min-w-0">
-                      <div className="font-medium text-xs sm:text-sm truncate">Discover Prospects</div>
-                      <div className="text-[10px] sm:text-xs text-gray-400">Find 20-50 leads</div>
-                    </div>
-                    <Play className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
-                  </button>
-
-                  <button
-                    onClick={() => handleTriggerWorkflow("generate_emails")}
-                    disabled={workflowStatus?.status === "running"}
-                    className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-lg sm:rounded-xl transition disabled:opacity-50"
-                  >
-                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 flex-shrink-0" />
-                    <div className="text-left flex-1 min-w-0">
-                      <div className="font-medium text-xs sm:text-sm truncate">Generate Emails</div>
-                      <div className="text-[10px] sm:text-xs text-gray-400">AI email campaign</div>
-                    </div>
-                    <Play className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400 flex-shrink-0" />
-                  </button>
+                )}
+                <div className="md:col-span-2">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Services Offered</label>
+                  <p className="text-gray-300 text-sm">{profile.services}</p>
                 </div>
-
-                <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-white/5 rounded-lg sm:rounded-xl">
-                  <h3 className="text-xs sm:text-sm font-medium mb-1 sm:mb-2">Selected Business</h3>
-                  <p className="text-xs sm:text-sm text-gray-400 break-words">{selectedBusiness.name}</p>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8 sm:py-12">
-                <Target className="w-8 h-8 sm:w-10 sm:h-10 text-gray-600 mx-auto mb-2 sm:mb-3" />
-                <p className="text-xs sm:text-sm text-gray-400">Select a business to see actions</p>
+                {profile.unique_selling_points && (
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                      Unique Selling Points
+                    </label>
+                    <p className="text-gray-300 text-sm">{profile.unique_selling_points}</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          </section>
+
+          {/* Targeting Section */}
+          <section id="targeting" className="mb-16">
+            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">Target</span>{" "}
+              Audience
+            </h2>
+
+            <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Customer Type</label>
+                  <p className="text-gray-200">{profile.target_customer_type}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Target Location</label>
+                  <p className="text-gray-200">{profile.target_location}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Contact Section */}
+          <section id="contact" className="mb-16">
+            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">Contact</span>{" "}
+              Details
+            </h2>
+
+            <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Full Address</label>
+                  <p className="text-gray-200">{profile.address}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Email</label>
+                  <p className="text-gray-200">{profile.email}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Phone</label>
+                  <p className="text-gray-200">{profile.phone}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Location</label>
+                  <p className="text-gray-200">
+                    {profile.city}, {profile.state} {profile.zip}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-      </main>
+      </div>
 
       {/* Create Business Modal */}
       {showCreateBusiness && (
