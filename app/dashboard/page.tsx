@@ -20,7 +20,6 @@ import {
   Sparkles,
   Send,
   Settings,
-  Zap,
 } from "lucide-react" // Merged: Added Settings icon and Zap icon
 
 interface ProfileData {
@@ -45,6 +44,7 @@ interface ProfileData {
   analysis_status: string // Added from existing code
   discovery_status: string // Added from existing code
   trial_end_date: string // Merged: Added trial_end_date from updates
+  logo: string | null // Merged: Added logo from updates
 }
 
 interface UserData {
@@ -769,12 +769,20 @@ export default function DashboardPage() {
         <div className="w-full md:w-1/3 lg:w-1/4 bg-black/40 backdrop-blur-lg border-r border-gray-800 flex flex-col">
           {/* Profile Header */}
           <div className="p-6 flex flex-col items-center text-center border-b border-gray-800">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 border-2 border-blue-400">
-              <span className="text-4xl font-semibold text-white">{profile.owner_name.charAt(0)}</span>
-            </div>
-            <h1 className="text-xl font-light mb-1">{profile.owner_name}</h1>
-            <p className="text-blue-400 mb-3">{profile.business_name}</p>
-            <p className="text-sm text-gray-400 mb-4">
+            {profile.logo ? (
+              <img
+                src={profile.logo || "/placeholder.svg"}
+                alt={`${profile.owner_name} logo`}
+                className="w-32 h-32 rounded-full object-cover mb-4 border-2 border-blue-400"
+              />
+            ) : (
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 border-2 border-blue-400">
+                <span className="text-3xl font-semibold text-white">{profile.owner_name.charAt(0)}</span>
+              </div>
+            )}
+            <h1 className="text-base font-light mb-1">{profile.owner_name}</h1>
+            <p className="text-sm text-blue-400 mb-3">{profile.business_name}</p>
+            <p className="text-xs text-gray-400 mb-4">
               {profile.description || `${profile.industry} professional focused on ${profile.services}`}
             </p>
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
@@ -795,46 +803,46 @@ export default function DashboardPage() {
               <li>
                 <a
                   href="#dashboard"
-                  onClick={() => setActiveSection("dashboard")} // Merged: onClick handler for active section
-                  className={`flex items-center py-2 px-3 rounded-md transition-colors ${
+                  onClick={() => setActiveSection("dashboard")}
+                  className={`flex items-center py-2 px-3 rounded-md transition-colors text-sm ${
                     activeSection === "dashboard"
                       ? "text-blue-400 bg-blue-500/10"
                       : "text-gray-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
-                  <Building2 className="w-5 h-5 mr-3" />
+                  <Building2 className="w-4 h-4 mr-3" />
                   Dashboard
                 </a>
               </li>
               <li>
                 <a
                   href="#targeting"
-                  className="flex items-center text-gray-400 hover:text-white py-2 px-3 rounded-md hover:bg-white/5 transition-colors"
+                  className="flex items-center text-gray-400 hover:text-white py-2 px-3 rounded-md hover:bg-white/5 transition-colors text-sm"
                 >
-                  <Target className="w-5 h-5 mr-3" />
+                  <Target className="w-4 h-4 mr-3" />
                   Targeting
                 </a>
               </li>
               <li>
                 <a
                   href="#contact"
-                  className="flex items-center text-gray-400 hover:text-white py-2 px-3 rounded-md hover:bg-white/5 transition-colors"
+                  className="flex items-center text-gray-400 hover:text-white py-2 px-3 rounded-md hover:bg-white/5 transition-colors text-sm"
                 >
-                  <Mail className="w-5 h-5 mr-3" />
+                  <Mail className="w-4 h-4 mr-3" />
                   Contact
                 </a>
               </li>
               <li>
                 <a
                   href="#settings"
-                  onClick={() => setActiveSection("settings")} // Merged: onClick handler for active section
-                  className={`flex items-center py-2 px-3 rounded-md transition-colors ${
+                  onClick={() => setActiveSection("settings")}
+                  className={`flex items-center py-2 px-3 rounded-md transition-colors text-sm ${
                     activeSection === "settings"
                       ? "text-blue-400 bg-blue-500/10"
                       : "text-gray-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
-                  <Settings className="w-5 h-5 mr-3" /> {/* Merged: Settings icon */}
+                  <Settings className="w-4 h-4 mr-3" />
                   Settings
                 </a>
               </li>
@@ -843,17 +851,17 @@ export default function DashboardPage() {
 
           {/* Contact Info */}
           <div className="mt-auto p-6 border-t border-gray-800">
-            <div className="text-sm text-gray-400 space-y-2">
+            <div className="text-xs text-gray-400 space-y-2">
               <div className="flex items-center">
-                <Mail className="w-4 h-4 mr-2" />
+                <Mail className="w-3 h-3 mr-2" />
                 <span>{profile.email}</span>
               </div>
               <div className="flex items-center">
-                <Phone className="w-4 h-4 mr-2" />
+                <Phone className="w-3 h-3 mr-2" />
                 <span>{profile.phone}</span>
               </div>
               <div className="flex items-center">
-                <MapPin className="w-4 h-4 mr-2" />
+                <MapPin className="w-3 h-3 mr-2" />
                 <span>
                   {profile.city}, {profile.state}
                 </span>
@@ -861,26 +869,22 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={handleLogout}
-              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30 transition-colors"
+              className="w-full mt-4 flex items-center justify-center gap-2 px-3 py-2 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30 transition-colors text-xs"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3 h-3" />
               Logout
             </button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {" "}
-          {/* Merged: Changed from w-full md:w-2/3 lg:w-3/4 to flex-1 */}
           <div className="p-6 md:p-10 max-w-5xl">
-            {" "}
-            {/* Merged: Added max-w-5xl */}
             {activeSection === "dashboard" && (
               <>
                 {/* Action Status Banner */}
                 {actionStatus && (
                   <div
-                    className={`mb-6 p-4 rounded-xl border ${
+                    className={`mb-6 p-4 rounded-xl border text-sm ${
                       actionStatus.startsWith("✓")
                         ? "bg-green-500/10 border-green-500/30 text-green-400"
                         : actionStatus.startsWith("⚠")
@@ -893,7 +897,7 @@ export default function DashboardPage() {
                 )}
 
                 <section className="mb-16">
-                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                  <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
                       AI-Powered
                     </span>{" "}
@@ -910,15 +914,15 @@ export default function DashboardPage() {
                     >
                       <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         {isDiscovering ? (
-                          <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <Search className="w-7 h-7 text-blue-400" />
+                          <Search className="w-6 h-6 text-blue-400" />
                         )}
                       </div>
-                      <h3 className="text-lg font-normal text-white mb-2">
+                      <h3 className="text-base font-normal text-white mb-2">
                         {isDiscovering ? "Discovering..." : "Discover Prospects"}
                       </h3>
-                      <p className="text-gray-400 text-sm mb-4">
+                      <p className="text-gray-400 text-xs mb-4">
                         Find businesses matching your target customer profile using AI-powered search.
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -936,15 +940,15 @@ export default function DashboardPage() {
                     >
                       <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         {isAnalyzing ? (
-                          <div className="w-7 h-7 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <Sparkles className="w-7 h-7 text-purple-400" />
+                          <Sparkles className="w-6 h-6 text-purple-400" />
                         )}
                       </div>
-                      <h3 className="text-lg font-normal text-white mb-2">
+                      <h3 className="text-base font-normal text-white mb-2">
                         {isAnalyzing ? "Generating..." : "Generate Emails"}
                       </h3>
-                      <p className="text-gray-400 text-sm mb-4">
+                      <p className="text-gray-400 text-xs mb-4">
                         Create personalized outreach emails using GPT-4 based on your business profile.
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -962,15 +966,15 @@ export default function DashboardPage() {
                     >
                       <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         {isSending ? (
-                          <div className="w-7 h-7 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <Send className="w-7 h-7 text-cyan-400" />
+                          <Send className="w-6 h-6 text-cyan-400" />
                         )}
                       </div>
-                      <h3 className="text-lg font-normal text-white mb-2">
+                      <h3 className="text-base font-normal text-white mb-2">
                         {isSending ? "Sending..." : "Send Campaign"}
                       </h3>
-                      <p className="text-gray-400 text-sm mb-4">
+                      <p className="text-gray-400 text-xs mb-4">
                         Launch your email campaign and track opens, clicks, and replies in real-time.
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -983,7 +987,7 @@ export default function DashboardPage() {
 
                 {/* Business Information Section */}
                 <section id="business" className="mb-16">
-                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                  <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
                       Business
                     </span>{" "}
@@ -996,11 +1000,11 @@ export default function DashboardPage() {
                         <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
                           Business Name
                         </label>
-                        <p className="text-gray-200">{profile.business_name}</p>
+                        <p className="text-gray-200 text-sm">{profile.business_name}</p>
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Industry</label>
-                        <p className="text-gray-200">{profile.industry}</p>
+                        <p className="text-gray-200 text-sm">{profile.industry}</p>
                       </div>
                       <div className="md:col-span-2">
                         <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Website</label>
@@ -1008,9 +1012,9 @@ export default function DashboardPage() {
                           href={profile.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 flex items-center gap-2"
+                          className="text-blue-400 hover:text-blue-300 flex items-center gap-2 text-sm"
                         >
-                          <Globe className="w-4 h-4" />
+                          <Globe className="w-3 h-3" />
                           {profile.website}
                         </a>
                       </div>
@@ -1019,21 +1023,21 @@ export default function DashboardPage() {
                           <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
                             Description
                           </label>
-                          <p className="text-gray-300 text-sm">{profile.description}</p>
+                          <p className="text-gray-300 text-xs">{profile.description}</p>
                         </div>
                       )}
                       <div className="md:col-span-2">
                         <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
                           Services Offered
                         </label>
-                        <p className="text-gray-300 text-sm">{profile.services}</p>
+                        <p className="text-gray-300 text-xs">{profile.services}</p>
                       </div>
                       {profile.unique_selling_points && (
                         <div className="md:col-span-2">
                           <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
                             Unique Selling Points
                           </label>
-                          <p className="text-gray-300 text-sm">{profile.unique_selling_points}</p>
+                          <p className="text-gray-300 text-xs">{profile.unique_selling_points}</p>
                         </div>
                       )}
                     </div>
@@ -1042,7 +1046,7 @@ export default function DashboardPage() {
 
                 {/* Targeting Section */}
                 <section id="targeting" className="mb-16">
-                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+                  <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
                       Target
                     </span>{" "}
@@ -1055,13 +1059,13 @@ export default function DashboardPage() {
                         <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
                           Customer Type
                         </label>
-                        <p className="text-gray-200">{profile.target_customer_type}</p>
+                        <p className="text-gray-200 text-sm">{profile.target_customer_type}</p>
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
                           Target Location
                         </label>
-                        <p className="text-gray-200">{profile.target_location}</p>
+                        <p className="text-gray-200 text-sm">{profile.target_location}</p>
                       </div>
                     </div>
                   </div>
@@ -1069,125 +1073,109 @@ export default function DashboardPage() {
 
                 {/* Contact Section */}
                 <section id="contact" className="mb-16">
-                  <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">
+                  <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-400">
                       Contact
                     </span>{" "}
-                    Details
+                    Information
                   </h2>
 
                   <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Full Address</label>
-                        <p className="text-gray-200">{profile.address}</p>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-200">{profile.email}</span>
                       </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Email</label>
-                        <p className="text-gray-200">{profile.email}</p>
+                      <div className="flex items-center gap-3">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-200">{profile.phone}</span>
                       </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Phone</label>
-                        <p className="text-gray-200">{profile.phone}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Location</label>
-                        <p className="text-gray-200">
-                          {profile.city}, {profile.state} {profile.zip}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-200">
+                          {profile.address}, {profile.city}, {profile.state} {profile.zip}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </section>
               </>
             )}
+
             {activeSection === "settings" && (
-              <section className="mb-10">
-                <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
-                    Auto-Discovery
+              <section className="mb-16">
+                <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+                    Schedule
                   </span>{" "}
                   Settings
                 </h2>
 
                 <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-                  {/* Enable Toggle */}
-                  <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-800">
-                    <div>
-                      <h3 className="text-lg font-normal text-white mb-1">Nightly Prospect Discovery</h3>
-                      <p className="text-gray-400 text-sm">Automatically find new prospects every night</p>
-                    </div>
-                    <button
-                      onClick={() => setSchedule((s) => ({ ...s, auto_discover_enabled: !s.auto_discover_enabled }))}
-                      className={`w-14 h-8 rounded-full transition-colors relative ${
-                        schedule.auto_discover_enabled ? "bg-blue-500" : "bg-gray-700"
-                      }`}
-                    >
-                      <div
-                        className={`absolute w-6 h-6 bg-white rounded-full top-1 transition-all ${
-                          schedule.auto_discover_enabled ? "right-1" : "left-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Prospects Per Night */}
-                  <div className="mb-6">
-                    <label className="block text-sm text-gray-400 mb-2">Prospects per night</label>
-                    <select
-                      value={schedule.daily_prospect_limit}
-                      onChange={(e) =>
-                        setSchedule((s) => ({ ...s, daily_prospect_limit: Number.parseInt(e.target.value) }))
-                      }
-                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
-                    >
-                      <option value={25}>25 prospects</option>
-                      <option value={50}>50 prospects</option>
-                      <option value={100}>100 prospects</option>
-                      <option value={200}>200 prospects (Premium)</option>
-                    </select>
-                    <p className="text-gray-500 text-xs mt-2">Free plan: 50/night • Pro plan: 200/night</p>
-                  </div>
-
-                  {/* Run Time */}
-                  <div className="mb-6">
-                    <label className="block text-sm text-gray-400 mb-2">Run at (EST)</label>
-                    <select
-                      value={schedule.run_time}
-                      onChange={(e) => setSchedule((s) => ({ ...s, run_time: e.target.value }))}
-                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
-                    >
-                      <option value="00:00">12:00 AM (Midnight)</option>
-                      <option value="01:00">1:00 AM</option>
-                      <option value="02:00">2:00 AM</option>
-                      <option value="03:00">3:00 AM</option>
-                      <option value="04:00">4:00 AM</option>
-                      <option value="05:00">5:00 AM</option>
-                    </select>
-                  </div>
-
-                  {/* Save Button */}
-                  <button
-                    onClick={handleSaveSchedule}
-                    disabled={savingSchedule}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg text-white font-normal hover:opacity-90 transition-opacity disabled:opacity-50"
-                  >
-                    {savingSchedule ? "Saving..." : "Save Schedule Settings"}
-                  </button>
-
-                  {/* Info Box */}
-                  <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                    <div className="flex items-start">
-                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center mr-3 flex-shrink-0">
-                        <Zap className="w-4 h-4 text-blue-400" />
-                      </div>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-400 font-normal mb-1">How it works</p>
-                        <p className="text-gray-400 text-sm">
-                          Our AI will search Google Maps and Apollo.io every night to find businesses matching your
-                          target profile. New prospects appear in your dashboard each morning, ready for outreach.
-                        </p>
+                        <h3 className="text-base font-normal text-white mb-1">Automatic Prospect Discovery</h3>
+                        <p className="text-xs text-gray-400">Run prospect discovery automatically every night</p>
                       </div>
+                      <button
+                        onClick={() =>
+                          setSchedule((prev) => ({ ...prev, auto_discover_enabled: !prev.auto_discover_enabled }))
+                        }
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          schedule.auto_discover_enabled ? "bg-blue-500" : "bg-gray-600"
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                            schedule.auto_discover_enabled ? "translate-x-6" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">
+                        Daily Prospect Limit
+                      </label>
+                      <select
+                        value={schedule.daily_prospect_limit}
+                        onChange={(e) =>
+                          setSchedule((prev) => ({ ...prev, daily_prospect_limit: Number.parseInt(e.target.value) }))
+                        }
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                      >
+                        <option value={25}>25 prospects/day</option>
+                        <option value={50}>50 prospects/day</option>
+                        <option value={100}>100 prospects/day</option>
+                        <option value={200}>200 prospects/day</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">Run Time</label>
+                      <input
+                        type="time"
+                        value={schedule.run_time}
+                        onChange={(e) => setSchedule((prev) => ({ ...prev, run_time: e.target.value }))}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleSaveSchedule}
+                      disabled={savingSchedule}
+                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all disabled:opacity-50 text-sm"
+                    >
+                      {savingSchedule ? "Saving..." : "Save Schedule Settings"}
+                    </button>
+
+                    <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                      <p className="text-xs text-blue-400">
+                        <strong>How it works:</strong> When enabled, the system will automatically discover new
+                        prospects every night at your specified time. Prospects will be added to your account up to the
+                        daily limit.
+                      </p>
                     </div>
                   </div>
                 </div>

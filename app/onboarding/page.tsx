@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Sparkles, Upload } from "lucide-react"
 
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
@@ -110,7 +110,7 @@ export default function OnboardingPage() {
   }
 
   const validateStep = (step: number): boolean => {
-    setError("")
+    setError(null)
 
     if (step === 1) {
       if (!formData.ownerName.trim() || !formData.jobTitle.trim()) {
@@ -155,20 +155,29 @@ export default function OnboardingPage() {
 
   const handleBack = () => {
     setCurrentStep((prev) => prev - 1)
-    setError("")
+    setError(null)
   }
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-
+  const handleSubmit = async () => {
     setIsLoading(true)
-    setError("")
+    setError(null)
 
     try {
       const token = localStorage.getItem("token")
       if (!token) {
+        setError("Authentication token not found. Please log in again.")
         router.push("/login")
         return
+      }
+
+      let logoBase64 = null
+      if (formData.logoFile) {
+        const reader = new FileReader()
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(formData.logoFile!)
+        })
       }
 
       const payload = {
@@ -177,6 +186,7 @@ export default function OnboardingPage() {
         website: formData.website || `https://${formData.businessName.toLowerCase().replace(/\s+/g, "")}.com`,
         owner_name: formData.ownerName,
         job_title: formData.jobTitle,
+        logo: logoBase64, // Include logo in payload
         email: formData.email,
         phone: formData.phone,
         address: `${formData.street}, ${formData.city}, ${formData.state} ${formData.zip}`,
@@ -279,7 +289,12 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSubmit()
+          }}
+        >
           <div className="px-6 py-4 bg-[#171717] space-y-4">
             {currentStep === 1 && (
               <>
