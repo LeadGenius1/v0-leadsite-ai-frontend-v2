@@ -20,7 +20,11 @@ export default function SignupPage() {
     setError("")
     setIsLoading(true)
 
+    console.log("[v0] Signup form submitted", { email, companyName })
+
     try {
+      console.log("[v0] Calling signup API:", `${API_BASE_URL}/auth/signup`)
+
       const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: "POST",
         headers: {
@@ -33,7 +37,10 @@ export default function SignupPage() {
         }),
       })
 
+      console.log("[v0] Signup API response status:", response.status)
+
       const data = await response.json()
+      console.log("[v0] Signup API response data:", data)
 
       if (!response.ok) {
         if (response.status === 409) {
@@ -45,10 +52,24 @@ export default function SignupPage() {
         }
       }
 
+      if (!data.token) {
+        console.error("[v0] No token in signup response!", data)
+        throw new Error("Server did not return authentication token")
+      }
+
+      console.log("[v0] Storing token:", data.token.substring(0, 20) + "...")
       localStorage.setItem("token", data.token)
+
+      console.log("[v0] Token stored, verifying...")
+      const storedToken = localStorage.getItem("token")
+      console.log("[v0] Token verification:", storedToken ? "SUCCESS" : "FAILED")
+
       setSuccess(true)
+
+      console.log("[v0] Redirecting to /onboarding")
       router.push("/onboarding")
     } catch (err) {
+      console.error("[v0] Signup error:", err)
       if (err instanceof TypeError && err.message.includes("fetch")) {
         setError(`Network error: ${err.message}`)
       } else {
