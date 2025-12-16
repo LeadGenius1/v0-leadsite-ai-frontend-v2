@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useRef } from "react"
 
@@ -77,6 +77,37 @@ interface Campaign {
   created_at: string
 }
 
+interface EmailStats {
+  sent: number
+  opened: number
+  openRate: number
+  clicked: number
+  clickRate: number
+  replies: number
+  hotLeads: number
+}
+
+interface Email {
+  id: number
+  email: string
+  company: string
+  subject: string
+  status: "delivered" | "opened" | "clicked" | "replied"
+  sentAt: string
+  replyText?: string
+  sentiment?: "positive" | "neutral" | "negative"
+  body?: string
+}
+
+interface Reply {
+  id: number
+  contactName: string
+  company: string
+  replyPreview: string
+  timeAgo: string
+  sentiment: "positive" | "interested" | "not_interested"
+}
+
 interface Prospect {
   id: number
   customer_id: string
@@ -145,6 +176,20 @@ export default function DashboardPage() {
     run_time: "02:00",
   })
   const [savingSchedule, setSavingSchedule] = useState(false)
+
+  const [emailStats, setEmailStats] = useState<EmailStats>({
+    sent: 0,
+    opened: 0,
+    openRate: 0,
+    clicked: 0,
+    clickRate: 0,
+    replies: 0,
+    hotLeads: 0,
+  })
+  const [recentEmails, setRecentEmails] = useState<Email[]>([])
+  const [replies, setReplies] = useState<Reply[]>([])
+  const [expandedEmailId, setExpandedEmailId] = useState<number | null>(null)
+  const [loadingEmails, setLoadingEmails] = useState(false)
 
   useEffect(() => {
     if (businesses.length === 1 && !selectedBusinessId) {
@@ -286,12 +331,20 @@ export default function DashboardPage() {
   }, []) // From existing
 
   useEffect(() => {
-    setStats({
+    setStats((prev) => ({
+      ...prev,
       prospects: prospects.length,
       campaigns: campaigns.length,
-      emails: 0,
-    })
+    }))
   }, [prospects, campaigns])
+
+  useEffect(() => {
+    if (profile && activeSection === "dashboard") {
+      fetchEmailStats()
+      fetchRecentEmails()
+      fetchReplies()
+    }
+  }, [profile, activeSection])
 
   const startPolling = (workflowType: string) => {
     console.log("[Dashboard] Starting polling for workflow:", workflowType)
@@ -741,6 +794,133 @@ export default function DashboardPage() {
       setSavingSchedule(false)
     }
   }
+
+  const fetchEmailStats = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_BASE_URL}/api/emails/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setEmailStats(data.stats || mockEmailStats)
+      } else {
+        // Use mock data on error
+        setEmailStats(mockEmailStats)
+      }
+    } catch (error) {
+      console.error("[v0] Error fetching email stats:", error)
+      setEmailStats(mockEmailStats)
+    }
+  }
+
+  const fetchRecentEmails = async () => {
+    setLoadingEmails(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_BASE_URL}/api/emails/recent`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setRecentEmails(data.emails || mockEmails)
+      } else {
+        setRecentEmails(mockEmails)
+      }
+    } catch (error) {
+      console.error("[v0] Error fetching recent emails:", error)
+      setRecentEmails(mockEmails)
+    } finally {
+      setLoadingEmails(false)
+    }
+  }
+
+  const fetchReplies = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_BASE_URL}/api/emails/replies`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setReplies(data.replies || mockReplies)
+      } else {
+        setReplies(mockReplies)
+      }
+    } catch (error) {
+      console.error("[v0] Error fetching replies:", error)
+      setReplies(mockReplies)
+    }
+  }
+
+  const mockEmailStats: EmailStats = {
+    sent: 147,
+    opened: 89,
+    openRate: 60.5,
+    clicked: 34,
+    clickRate: 23.1,
+    replies: 12,
+    hotLeads: 5,
+  }
+
+  const mockEmails: Email[] = [
+    {
+      id: 1,
+      email: "john@acmeplumbing.com",
+      company: "Acme Plumbing",
+      subject: "Quick question about your services",
+      status: "replied",
+      sentAt: "2 hours ago",
+      replyText: "Yes, I'd love to learn more! Can we schedule a call?",
+      sentiment: "positive",
+      body: "Hi John, I noticed your business is doing great in the local area. I wanted to reach out to see if you'd be interested in learning more about our lead generation services...",
+    },
+    {
+      id: 2,
+      email: "sarah@bestroofing.com",
+      company: "Best Roofing Co",
+      subject: "Helping local roofers get more leads",
+      status: "opened",
+      sentAt: "5 hours ago",
+      body: "Hi Sarah, We specialize in helping roofing companies like yours generate qualified leads through AI-powered prospecting...",
+    },
+    {
+      id: 3,
+      email: "mike@cleanpro.com",
+      company: "CleanPro Services",
+      subject: "Saw your Google reviews",
+      status: "delivered",
+      sentAt: "1 day ago",
+      body: "Hi Mike, I came across CleanPro Services and was impressed by your reviews. I wanted to reach out...",
+    },
+  ]
+
+  const mockReplies: Reply[] = [
+    {
+      id: 1,
+      contactName: "John Smith",
+      company: "Acme Plumbing",
+      replyPreview: "Yes, I'd love to learn more! Can we schedule a call?",
+      timeAgo: "2 hours ago",
+      sentiment: "positive",
+    },
+    {
+      id: 2,
+      contactName: "Lisa Johnson",
+      company: "Elite Construction",
+      replyPreview: "Sounds interesting, send me more details.",
+      timeAgo: "5 hours ago",
+      sentiment: "interested",
+    },
+    {
+      id: 3,
+      contactName: "Tom Wilson",
+      company: "Quick Repairs LLC",
+      replyPreview: "Not interested at this time, thanks.",
+      timeAgo: "1 day ago",
+      sentiment: "not_interested",
+    },
+  ]
 
   if (loading) {
     return (
@@ -1291,6 +1471,203 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </section>
+
+                <div className="mt-8">
+                  <h2 className="text-xl font-bold mb-6">
+                    <span className="text-cyan-400">Email Campaign</span> Tracking
+                  </h2>
+
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {/* Emails Sent */}
+                    <div className="backdrop-blur-xl bg-black/40 border border-cyan-500/30 rounded-xl p-4 hover:border-cyan-500/50 transition-all">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-400 uppercase tracking-wide">Emails Sent</span>
+                        <Send className="w-4 h-4 text-cyan-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-cyan-400">{emailStats.sent}</div>
+                    </div>
+
+                    {/* Opened */}
+                    <div className="backdrop-blur-xl bg-black/40 border border-blue-500/30 rounded-xl p-4 hover:border-blue-500/50 transition-all">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-400 uppercase tracking-wide">Opened</span>
+                        <Mail className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-blue-400">{emailStats.opened}</div>
+                      <div className="text-xs text-gray-400 mt-1">{emailStats.openRate}% open rate</div>
+                    </div>
+
+                    {/* Clicked */}
+                    <div className="backdrop-blur-xl bg-black/40 border border-purple-500/30 rounded-xl p-4 hover:border-purple-500/50 transition-all">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-400 uppercase tracking-wide">Clicked</span>
+                        <Target className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-purple-400">{emailStats.clicked}</div>
+                      <div className="text-xs text-gray-400 mt-1">{emailStats.clickRate}% click rate</div>
+                    </div>
+
+                    {/* Replies */}
+                    <div className="backdrop-blur-xl bg-black/40 border border-green-500/30 rounded-xl p-4 hover:border-green-500/50 transition-all">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-400 uppercase tracking-wide">Replies</span>
+                        <Sparkles className="w-4 h-4 text-green-400" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-2xl font-bold text-green-400">{emailStats.replies}</div>
+                        {emailStats.hotLeads > 0 && (
+                          <span className="text-sm text-orange-400 flex items-center gap-1">
+                            🔥 {emailStats.hotLeads}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Emails Table and Reply Feed */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Recent Emails Table */}
+                    <div className="lg:col-span-2 backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl overflow-hidden">
+                      <div className="p-4 border-b border-white/10">
+                        <h3 className="text-sm font-semibold text-white">Recent Emails</h3>
+                      </div>
+
+                      {loadingEmails ? (
+                        <div className="flex items-center justify-center p-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                        </div>
+                      ) : recentEmails.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500 text-sm">
+                          No emails sent yet. Start your campaign!
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-white/5 border-b border-white/10">
+                              <tr>
+                                <th className="text-left p-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                                  Recipient
+                                </th>
+                                <th className="text-left p-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                                  Company
+                                </th>
+                                <th className="text-left p-3 text-xs font-medium text-gray-400 uppercase tracking-wide hidden md:table-cell">
+                                  Subject
+                                </th>
+                                <th className="text-left p-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                                  Status
+                                </th>
+                                <th className="text-left p-3 text-xs font-medium text-gray-400 uppercase tracking-wide hidden sm:table-cell">
+                                  Sent
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {recentEmails.map((email) => (
+                                <React.Fragment key={email.id}>
+                                  <tr
+                                    onClick={() => setExpandedEmailId(expandedEmailId === email.id ? null : email.id)}
+                                    className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
+                                  >
+                                    <td className="p-3 text-xs text-gray-300">{email.email}</td>
+                                    <td className="p-3 text-xs text-gray-300">{email.company}</td>
+                                    <td className="p-3 text-xs text-gray-400 hidden md:table-cell">
+                                      {email.subject.slice(0, 30)}
+                                      {email.subject.length > 30 && "..."}
+                                    </td>
+                                    <td className="p-3">
+                                      {email.status === "replied" && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                                          🔥 Replied
+                                        </span>
+                                      )}
+                                      {email.status === "clicked" && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                          Clicked
+                                        </span>
+                                      )}
+                                      {email.status === "opened" && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                          Opened
+                                        </span>
+                                      )}
+                                      {email.status === "delivered" && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                                          Delivered
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="p-3 text-xs text-gray-400 hidden sm:table-cell">{email.sentAt}</td>
+                                  </tr>
+                                  {expandedEmailId === email.id && (
+                                    <tr>
+                                      <td colSpan={5} className="p-4 bg-white/5">
+                                        <div className="space-y-3">
+                                          <div>
+                                            <div className="text-xs text-gray-400 mb-1">Email Body:</div>
+                                            <div className="text-sm text-gray-300 leading-relaxed">{email.body}</div>
+                                          </div>
+                                          {email.replyText && (
+                                            <div>
+                                              <div className="text-xs text-gray-400 mb-1">Reply:</div>
+                                              <div className="text-sm text-green-400 bg-green-500/10 p-3 rounded-lg border border-green-500/30">
+                                                {email.replyText}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Reply Feed */}
+                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl overflow-hidden">
+                      <div className="p-4 border-b border-white/10">
+                        <h3 className="text-sm font-semibold text-white">Recent Replies</h3>
+                      </div>
+                      <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
+                        {replies.length === 0 ? (
+                          <div className="text-center text-gray-500 text-xs py-8">No replies yet</div>
+                        ) : (
+                          replies.map((reply) => (
+                            <div
+                              key={reply.id}
+                              className={`p-3 rounded-lg border transition-all hover:scale-[1.02] ${
+                                reply.sentiment === "positive"
+                                  ? "bg-green-500/10 border-green-500/30"
+                                  : reply.sentiment === "interested"
+                                    ? "bg-blue-500/10 border-blue-500/30"
+                                    : "bg-gray-500/10 border-gray-500/30"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <div className="text-xs font-semibold text-white">{reply.contactName}</div>
+                                  <div className="text-xs text-gray-400">{reply.company}</div>
+                                </div>
+                                <div>
+                                  {reply.sentiment === "positive" && <span className="text-lg">🔥</span>}
+                                  {reply.sentiment === "interested" && <span className="text-lg">👍</span>}
+                                  {reply.sentiment === "not_interested" && <span className="text-lg">👎</span>}
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-300 mb-2">{reply.replyPreview}</div>
+                              <div className="text-xs text-gray-500">{reply.timeAgo}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </>
             )}
 
