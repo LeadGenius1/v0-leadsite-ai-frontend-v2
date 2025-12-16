@@ -6,7 +6,7 @@ import { useRef } from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, Building2, Target, Mail, MapPin, Phone, Globe, Loader2, X } from "lucide-react"
+import { LogOut, Building2, Target, Mail, MapPin, Phone, Globe, Loader2, X, Search, Sparkles, Send } from "lucide-react"
 
 interface ProfileData {
   id: string
@@ -109,6 +109,12 @@ export default function DashboardPage() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null) // From existing
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null) // From existing
 
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isDiscovering, setIsDiscovering] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [actionStatus, setActionStatus] = useState<string | null>(null)
+  const [stats, setStats] = useState({ prospects: 0, campaigns: 0, emails: 0 })
+
   useEffect(() => {
     if (businesses.length === 1 && !selectedBusinessId) {
       setSelectedBusinessId(businesses[0].id)
@@ -130,7 +136,7 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: body ? JSON.JSON.stringify(body) : null,
+        body: body ? JSON.stringify(body) : null,
       })
 
       if (response.status === 401) {
@@ -236,6 +242,14 @@ export default function DashboardPage() {
       }
     }
   }, []) // From existing
+
+  useEffect(() => {
+    setStats({
+      prospects: prospects.length,
+      campaigns: campaigns.length,
+      emails: 0,
+    })
+  }, [prospects, campaigns])
 
   const startPolling = (workflowType: string) => {
     console.log("[Dashboard] Starting polling for workflow:", workflowType)
@@ -405,6 +419,162 @@ export default function DashboardPage() {
       stopPolling()
     }
   } // From existing
+
+  const handleDiscoverProspects = async () => {
+    if (!profile?.id) {
+      setActionStatus("⚠ Profile not loaded. Please refresh.")
+      return
+    }
+
+    setIsDiscovering(true)
+    setActionStatus(null)
+
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("https://api.leadsite.ai/api/profile/analyze", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setActionStatus("✓ Prospect discovery started! Results will appear shortly.")
+        pollForProspects()
+      } else {
+        setActionStatus("✗ Failed: " + (data.error || "Unknown error"))
+      }
+    } catch (err) {
+      setActionStatus("✗ Network error. Please try again.")
+    } finally {
+      setIsDiscovering(false)
+    }
+  }
+
+  const handleGenerateEmails = async () => {
+    setIsAnalyzing(true)
+    setActionStatus(null)
+
+    try {
+      const token = localStorage.getItem("token")
+      const customerId = localStorage.getItem("customerId")
+
+      // First check if we have prospects
+      const prospectsRes = await fetch("https://api.leadsite.ai/api/prospects", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const prospectsData = await prospectsRes.json()
+
+      if (!prospectsData.prospects?.length) {
+        setActionStatus("⚠ No prospects found. Discover prospects first!")
+        setIsAnalyzing(false)
+        return
+      }
+
+      // Create a campaign and trigger email generation
+      const campaignRes = await fetch("https://api.leadsite.ai/api/campaigns", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: `Campaign ${new Date().toLocaleDateString()}`,
+          business_id: profile?.id || 1,
+          customer_id: customerId,
+        }),
+      })
+
+      const campaignData = await campaignRes.json()
+
+      if (campaignData.success || campaignData.campaign) {
+        const campaignId = campaignData.campaign?.id || campaignData.id
+
+        // Trigger prospect discovery for this campaign
+        await fetch(`https://api.leadsite.ai/api/campaigns/${campaignId}/discover-prospects`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        setActionStatus("✓ Email generation started! Check Campaigns for progress.")
+
+        // Reload campaigns
+        const campaignsData = await callApi("GET", `/api/campaigns?customer_id=${customerId}`)
+        setCampaigns(campaignsData?.campaigns || [])
+      }
+    } catch (err) {
+      setActionStatus("✗ Failed to generate emails.")
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  const handleSendCampaign = async () => {
+    setIsSending(true)
+    setActionStatus(null)
+
+    try {
+      const token = localStorage.getItem("token")
+
+      // Get campaigns
+      const campaignsRes = await fetch("https://api.leadsite.ai/api/campaigns", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const campaignsData = await campaignsRes.json()
+
+      if (!campaignsData.campaigns?.length) {
+        setActionStatus("⚠ No campaigns found. Generate emails first!")
+        setIsSending(false)
+        return
+      }
+
+      // Send the most recent campaign
+      const latestCampaign = campaignsData.campaigns[0]
+      const sendRes = await fetch(`https://api.leadsite.ai/api/campaigns/${latestCampaign.id}/send`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      const sendData = await sendRes.json()
+
+      if (sendData.success) {
+        setActionStatus("✓ Campaign sending started! Emails will be delivered shortly.")
+      }
+    } catch (err) {
+      setActionStatus("✗ Failed to send campaign.")
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const pollForProspects = () => {
+    let attempts = 0
+    const maxAttempts = 12 // 1 minute max
+
+    const interval = setInterval(async () => {
+      attempts++
+      const token = localStorage.getItem("token")
+
+      const res = await fetch("https://api.leadsite.ai/api/prospects", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+
+      if (data.prospects?.length > stats.prospects) {
+        setStats((prev) => ({ ...prev, prospects: data.prospects.length }))
+        setProspects(data.prospects)
+        setActionStatus(`✓ Found ${data.prospects.length} prospects!`)
+        clearInterval(interval)
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(interval)
+      }
+    }, 5000)
+  }
 
   const getWorkflowMessage = (type: string, status: string) => {
     const messages: Record<string, Record<string, string>> = {
@@ -613,6 +783,107 @@ export default function DashboardPage() {
         </div>
 
         <div className="w-full md:w-2/3 lg:w-3/4 p-6 md:p-10 overflow-y-auto">
+          {actionStatus && (
+            <div
+              className={`mb-6 p-4 rounded-xl border ${
+                actionStatus.startsWith("✓")
+                  ? "bg-green-500/10 border-green-500/30 text-green-400"
+                  : actionStatus.startsWith("⚠")
+                    ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                    : "bg-red-500/10 border-red-500/30 text-red-400"
+              }`}
+            >
+              {actionStatus}
+            </div>
+          )}
+
+          <section className="mb-16">
+            <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+                AI-Powered
+              </span>{" "}
+              Actions
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Discover Prospects Card */}
+              <div
+                onClick={!isDiscovering ? handleDiscoverProspects : undefined}
+                className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
+                  isDiscovering ? "opacity-50 cursor-wait" : "hover:border-blue-500/50"
+                }`}
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  {isDiscovering ? (
+                    <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Search className="w-7 h-7 text-blue-400" />
+                  )}
+                </div>
+                <h3 className="text-lg font-normal text-white mb-2">
+                  {isDiscovering ? "Discovering..." : "Discover Prospects"}
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Find businesses matching your target customer profile using AI-powered search.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Google Maps</span>
+                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Apollo.io</span>
+                </div>
+              </div>
+
+              {/* Generate Emails Card */}
+              <div
+                onClick={!isAnalyzing ? handleGenerateEmails : undefined}
+                className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
+                  isAnalyzing ? "opacity-50 cursor-wait" : "hover:border-purple-500/50"
+                }`}
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  {isAnalyzing ? (
+                    <div className="w-7 h-7 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="w-7 h-7 text-purple-400" />
+                  )}
+                </div>
+                <h3 className="text-lg font-normal text-white mb-2">
+                  {isAnalyzing ? "Generating..." : "Generate Emails"}
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Create personalized outreach emails using GPT-4 based on your business profile.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">GPT-4</span>
+                  <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">Personalized</span>
+                </div>
+              </div>
+
+              {/* Send Campaign Card */}
+              <div
+                onClick={!isSending ? handleSendCampaign : undefined}
+                className={`group cursor-pointer backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6 transition-all hover:-translate-y-1 ${
+                  isSending ? "opacity-50 cursor-wait" : "hover:border-cyan-500/50"
+                }`}
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  {isSending ? (
+                    <div className="w-7 h-7 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="w-7 h-7 text-cyan-400" />
+                  )}
+                </div>
+                <h3 className="text-lg font-normal text-white mb-2">{isSending ? "Sending..." : "Send Campaign"}</h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Launch your email campaign and track opens, clicks, and replies in real-time.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded">SendGrid</span>
+                  <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded">Tracking</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Business Information Section */}
           <section id="business" className="mb-16">
             <h2 className="text-2xl font-light mb-6 border-b border-gray-800 pb-2">
