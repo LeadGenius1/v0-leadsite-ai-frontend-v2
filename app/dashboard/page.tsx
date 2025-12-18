@@ -190,11 +190,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("sessionToken")
+    console.log("[DASHBOARD] Auth check - Token exists:", !!token)
+    console.log("[DASHBOARD] Token value:", token ? `${token.substring(0, 20)}...` : "null")
+
     if (!token) {
+      console.log("[DASHBOARD] No token found, redirecting to login")
       window.location.href = "/login"
       return
     }
 
+    console.log("[DASHBOARD] Token valid, fetching dashboard data")
     fetchDashboard()
     fetchQuickStats()
     fetchActivities()

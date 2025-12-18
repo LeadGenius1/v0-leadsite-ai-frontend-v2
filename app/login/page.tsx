@@ -18,8 +18,14 @@ export default function LoginPage() {
     setError("")
     setIsLoading(true)
 
+    console.log("[LOGIN] Attempt started")
+    console.log("[LOGIN] Email:", email)
+
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const loginUrl = `${API_BASE_URL}/auth/login`
+      console.log("[LOGIN] Calling:", loginUrl)
+
+      const response = await fetch(loginUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -27,20 +33,42 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       })
 
-      const data = await response.json()
+      console.log("[LOGIN] Response status:", response.status)
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to log in")
+        if (response.status === 404) {
+          throw new Error("Login endpoint not found. Backend may not be deployed correctly.")
+        } else if (response.status === 401) {
+          throw new Error("Invalid email or password")
+        } else if (response.status === 500) {
+          throw new Error("Server error. Please try again later.")
+        }
+
+        const data = await response.json().catch(() => ({ message: "Request failed" }))
+        throw new Error(data.message || `Login failed with status ${response.status}`)
       }
+
+      const data = await response.json()
+      console.log("[LOGIN] Response data:", { hasToken: !!data.token, hasUser: !!data.user })
 
       if (data.token) {
-        localStorage.setItem("token", data.token)
-      }
-      if (data.user?.customerId) {
-        localStorage.setItem("customerId", data.user.customerId)
+        localStorage.setItem("sessionToken", data.token)
+        localStorage.setItem("token", data.token) // Store both for compatibility
+        console.log("[LOGIN] Token stored:", localStorage.getItem("sessionToken"))
+      } else {
+        throw new Error("No token received from server")
       }
 
-      // Check if user has completed onboarding
+      if (data.user?.customerId || data.customerId) {
+        const customerId = data.user?.customerId || data.customerId
+        localStorage.setItem("customerId", customerId.toString())
+        console.log("[LOGIN] Customer ID stored:", customerId)
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      console.log("[LOGIN] Token verified in storage:", localStorage.getItem("sessionToken"))
+
+      console.log("[LOGIN] Checking for user profile...")
       try {
         const profileResponse = await fetch(`${API_BASE_URL}/api/profile`, {
           headers: {
@@ -48,21 +76,35 @@ export default function LoginPage() {
           },
         })
 
+        console.log("[LOGIN] Profile check status:", profileResponse.status)
+
         if (!profileResponse.ok && profileResponse.status === 404) {
-          // No profile exists, redirect to onboarding
-          router.push("/onboarding")
+          console.log("[LOGIN] No profile found, redirecting to onboarding")
+          window.location.href = "/onboarding"
         } else {
-          // Profile exists, redirect to dashboard
-          router.push("/dashboard")
+          console.log("[LOGIN] Profile exists, redirecting to dashboard")
+          window.location.href = "/dashboard"
         }
       } catch (profileError) {
-        // If profile check fails, assume they need onboarding
-        router.push("/onboarding")
+        console.log("[LOGIN] Profile check failed, assuming new user:", profileError)
+        window.location.href = "/onboarding"
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+      console.error("[LOGIN] Login error:", err)
+
+      if (err instanceof TypeError && err.message === "Failed to fetch") {
+        setError(
+          `Cannot connect to backend server at ${API_BASE_URL}. ` +
+            "Please check: (1) Backend is running on Railway, " +
+            "(2) CORS is configured to allow app.leadsite.ai, " +
+            "(3) /auth/login endpoint exists.",
+        )
+      } else {
+        setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+      }
     } finally {
       setIsLoading(false)
+      console.log("[LOGIN] Login attempt completed")
     }
   }
 
