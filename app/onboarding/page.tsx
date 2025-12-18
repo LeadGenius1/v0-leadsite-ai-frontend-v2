@@ -1,111 +1,123 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Sparkles, Upload } from "lucide-react"
+import {
+  Building2,
+  Globe,
+  Target,
+  Sparkles,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Loader2,
+  Briefcase,
+  Mail,
+} from "lucide-react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
-
-const STATES = [
-  "AL",
-  "AK",
-  "AZ",
-  "AR",
-  "CA",
-  "CO",
-  "CT",
-  "DE",
-  "FL",
-  "GA",
-  "HI",
-  "ID",
-  "IL",
-  "IN",
-  "IA",
-  "KS",
-  "KY",
-  "LA",
-  "ME",
-  "MD",
-  "MA",
-  "MI",
-  "MN",
-  "MS",
-  "MO",
-  "MT",
-  "NE",
-  "NV",
-  "NH",
-  "NJ",
-  "NM",
-  "NY",
-  "NC",
-  "ND",
-  "OH",
-  "OK",
-  "OR",
-  "PA",
-  "RI",
-  "SC",
-  "SD",
-  "TN",
-  "TX",
-  "UT",
-  "VT",
-  "VA",
-  "WA",
-  "WV",
-  "WI",
-  "WY",
-]
 
 export default function OnboardingPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    // Step 1: Profile
-    ownerName: "",
-    jobTitle: "",
-    logoFile: null as File | null,
+    // Step 1: Business Basics
+    website_url: "",
+    business_name: "",
+    industry: "",
+    company_size: "",
+    year_founded: "",
 
-    // Step 2: Business Address
-    businessName: "",
-    street: "",
-    city: "",
-    state: "",
-    zip: "",
+    // Step 2: Target Customer
+    target_customer_type: "",
+    target_industries: [] as string[],
+    target_company_sizes: [] as string[],
+    target_job_titles: [] as string[],
+    target_locations: [] as string[],
+    custom_job_titles: "",
 
-    // Step 3: Contact & Social
-    email: "",
-    phone: "",
-    linkedinUrl: "",
-    twitterUrl: "",
-    githubUrl: "",
+    // Step 3: Value Proposition
+    services_offered: "",
+    unique_selling_points: "",
+    customer_pain_points: "",
 
-    // Additional fields for backend
-    industry: "Technology",
-    website: "",
+    // Step 4: Outreach Preferences
+    email_tone: "professional",
+    email_style: "concise",
+    include_case_studies: false,
+    include_pricing: false,
   })
 
-  const updateField = (field: string, value: string | File | null) => {
+  const industries = [
+    "Technology / SaaS",
+    "Marketing / Advertising",
+    "Financial Services",
+    "Healthcare",
+    "E-commerce / Retail",
+    "Manufacturing",
+    "Real Estate",
+    "Professional Services",
+    "Education",
+    "Hospitality / Travel",
+    "Construction",
+    "Logistics / Transportation",
+    "Media / Entertainment",
+    "Nonprofit",
+    "Other",
+  ]
+
+  const companySizes = ["1-10 employees", "11-50 employees", "51-200 employees", "201-500 employees", "500+ employees"]
+
+  const commonJobTitles = [
+    "CEO / Founder",
+    "CTO / Technical Lead",
+    "CMO / Marketing Director",
+    "CFO / Finance Director",
+    "VP of Sales",
+    "VP of Operations",
+    "HR Director",
+    "Procurement Manager",
+    "IT Manager",
+    "Business Owner",
+  ]
+
+  const regions = [
+    "United States",
+    "Canada",
+    "United Kingdom",
+    "Europe",
+    "Australia",
+    "Asia Pacific",
+    "Latin America",
+    "Global",
+  ]
+
+  const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    setError(null)
   }
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      updateField("logoFile", file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+  const toggleSelection = (field: string, item: string) => {
+    const currentArray = formData[field as keyof typeof formData] as string[]
+    const newArray = currentArray.includes(item) ? currentArray.filter((i) => i !== item) : [...currentArray, item]
+    updateField(field, newArray)
+  }
+
+  const validateUrl = (url: string) => {
+    let validUrl = url
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      validUrl = "https://" + url
+    }
+    try {
+      new URL(validUrl)
+      return { valid: true, url: validUrl }
+    } catch {
+      return { valid: false, url }
     }
   }
 
@@ -113,33 +125,20 @@ export default function OnboardingPage() {
     setError(null)
 
     if (step === 1) {
-      if (!formData.ownerName.trim() || !formData.jobTitle.trim()) {
+      const { valid } = validateUrl(formData.website_url)
+      if (!valid) {
+        setError("Please enter a valid website URL")
+        return false
+      }
+      if (!formData.business_name || !formData.industry) {
         setError("Please complete all required fields")
         return false
       }
     }
 
     if (step === 2) {
-      if (
-        !formData.businessName.trim() ||
-        !formData.street.trim() ||
-        !formData.city.trim() ||
-        !formData.state ||
-        !formData.zip.trim()
-      ) {
-        setError("Please complete all required fields")
-        return false
-      }
-    }
-
-    if (step === 3) {
-      if (!formData.email.trim() || !formData.phone.trim()) {
-        setError("Email and phone are required")
-        return false
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(formData.email)) {
-        setError("Please enter a valid email address")
+      if (!formData.target_customer_type) {
+        setError("Please select your customer type")
         return false
       }
     }
@@ -149,7 +148,11 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => prev + 1)
+      if (currentStep === 4) {
+        handleSubmit()
+      } else {
+        setCurrentStep((prev) => prev + 1)
+      }
     }
   }
 
@@ -159,47 +162,41 @@ export default function OnboardingPage() {
   }
 
   const handleSubmit = async () => {
-    setIsLoading(true)
+    setIsAnalyzing(true)
     setError(null)
 
     try {
       const token = localStorage.getItem("token")
       if (!token) {
-        setError("Authentication token not found. Please log in again.")
         router.push("/login")
         return
       }
 
-      let logoBase64 = null
-      if (formData.logoFile) {
-        const reader = new FileReader()
-        logoBase64 = await new Promise<string>((resolve, reject) => {
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(formData.logoFile!)
-        })
-      }
+      const { url } = validateUrl(formData.website_url)
 
       const payload = {
-        business_name: formData.businessName,
+        website_url: url,
+        business_name: formData.business_name,
         industry: formData.industry,
-        website: formData.website || `https://${formData.businessName.toLowerCase().replace(/\s+/g, "")}.com`,
-        owner_name: formData.ownerName,
-        job_title: formData.jobTitle,
-        logo: logoBase64, // Include logo in payload
-        email: formData.email,
-        phone: formData.phone,
-        address: `${formData.street}, ${formData.city}, ${formData.state} ${formData.zip}`,
-        city: formData.city,
-        state: formData.state,
-        zip: formData.zip,
-        linkedin_url: formData.linkedinUrl,
-        twitter_url: formData.twitterUrl,
-        github_url: formData.githubUrl,
-        target_customer_type: "",
-        target_location: `${formData.city}, ${formData.state}`,
-        services: "",
+        company_size: formData.company_size,
+        year_founded: formData.year_founded,
+        target_customer_type: formData.target_customer_type,
+        target_industries: formData.target_industries.join(", "),
+        target_company_sizes: formData.target_company_sizes.join(", "),
+        target_job_titles: [...formData.target_job_titles, formData.custom_job_titles].filter(Boolean).join(", "),
+        target_locations: formData.target_locations.join(", "),
+        services: formData.services_offered,
+        unique_selling_points: formData.unique_selling_points,
+        customer_pain_points: formData.customer_pain_points,
+        email_tone: formData.email_tone,
+        email_style: formData.email_style,
+        email_preferences: {
+          include_case_studies: formData.include_case_studies,
+          include_pricing: formData.include_pricing,
+        },
       }
+
+      console.log("[v0] Submitting comprehensive onboarding:", payload)
 
       const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: "POST",
@@ -210,348 +207,561 @@ export default function OnboardingPage() {
         body: JSON.stringify(payload),
       })
 
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to save profile")
+      if (!response.ok) {
+        throw new Error("Failed to save profile")
       }
 
-      router.push("/dashboard")
+      // Simulate AI analysis
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      window.location.href = "/dashboard"
     } catch (err) {
+      console.error("[v0] Onboarding error:", err)
       setError(err instanceof Error ? err.message : "An error occurred")
-      setIsLoading(false)
+      setIsAnalyzing(false)
     }
   }
 
-  const steps = [
-    { number: 1, label: "Profile" },
-    { number: 2, label: "Address" },
-    { number: 3, label: "Contact" },
-    { number: 4, label: "Finish" },
-  ]
-
-  return (
-    <div className="min-h-screen bg-[#101010] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-[#151515] rounded-xl overflow-hidden shadow-2xl border border-[#232323]">
-        <div className="px-6 pt-6 pb-4 border-b border-[#232323]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-blue-400" />
-              <h2 className="text-gray-200 font-medium text-sm">Getting Started</h2>
-            </div>
-            <span className="text-xs text-gray-500">Step {currentStep} of 4</span>
+  if (isAnalyzing) {
+    return (
+      <div className="min-h-screen bg-black text-white font-['Inter'] relative overflow-hidden flex items-center justify-center">
+        {/* Space Background */}
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <div className="absolute inset-0 opacity-30">
+            {[...Array(50)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 bg-white rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animation: `twinkle ${2 + Math.random() * 3}s infinite`,
+                }}
+              />
+            ))}
           </div>
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-900/20 rounded-full blur-[150px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-900/15 rounded-full blur-[150px]" />
         </div>
 
-        {/* Welcome Message (only on step 1) */}
-        {currentStep === 1 && (
-          <div className="px-6 py-8">
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="bg-blue-500/10 p-3 rounded-full mb-4">
-                <Sparkles className="w-10 h-10 text-blue-400" />
-              </div>
-              <h1 className="text-2xl font-semibold text-white mb-2">Welcome to the platform!</h1>
-              <p className="text-gray-400 text-sm">
-                Let's get you set up in just a few simple steps. It'll only take a minute.
-              </p>
-            </div>
+        <div className="relative z-10 text-center">
+          <Loader2 className="w-16 h-16 text-indigo-400 animate-spin mx-auto mb-6" />
+          <h2 className="text-2xl font-medium mb-2">AI is analyzing your business</h2>
+          <p className="text-neutral-400">Processing your website and building your profile...</p>
+        </div>
+      </div>
+    )
+  }
 
-            <div className="flex justify-between items-center mb-8 px-2">
-              {steps.map((step, idx) => (
-                <div key={step.number} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                        step.number === currentStep
-                          ? "bg-blue-500 text-white"
-                          : step.number < currentStep
-                            ? "bg-blue-500/50 text-white"
-                            : "bg-[#232323] text-gray-400"
-                      }`}
-                    >
-                      {step.number}
-                    </div>
-                    <p className={`text-xs mt-1 ${step.number === currentStep ? "text-blue-400" : "text-gray-500"}`}>
-                      {step.label}
-                    </p>
-                  </div>
-                  {idx < steps.length - 1 && (
-                    <div className="h-[2px] flex-grow bg-[#232323] mx-1">
-                      <div
-                        className="h-full bg-blue-500 transition-all"
-                        style={{ width: step.number < currentStep ? "100%" : "0%" }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            handleSubmit()
+  return (
+    <div className="min-h-screen bg-black text-white font-['Inter'] relative overflow-hidden">
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 opacity-30">
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-white rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animation: `twinkle ${2 + Math.random() * 3}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundSize: "40px 40px",
+            backgroundImage: `
+              linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)
+            `,
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
           }}
-        >
-          <div className="px-6 py-4 bg-[#171717] space-y-4">
+        />
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-900/20 rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-900/15 rounded-full blur-[150px]" />
+      </div>
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-2xl">
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full" />
+            <span className="text-xl font-medium tracking-wide">LeadSite.AI</span>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mb-12">
+            {[
+              { num: 1, label: "Business" },
+              { num: 2, label: "Audience" },
+              { num: 3, label: "Value Prop" },
+              { num: 4, label: "Preferences" },
+            ].map((step, index, array) => (
+              <div key={step.num} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      currentStep > step.num
+                        ? "bg-indigo-500 text-white"
+                        : currentStep === step.num
+                          ? "bg-indigo-500/20 border-2 border-indigo-500 text-indigo-400"
+                          : "bg-white/5 border border-white/10 text-neutral-500"
+                    }`}
+                  >
+                    {currentStep > step.num ? <Check className="w-5 h-5" /> : step.num}
+                  </div>
+                  <span className={`text-xs mt-2 ${currentStep >= step.num ? "text-white" : "text-neutral-500"}`}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < array.length - 1 && (
+                  <div
+                    className={`w-16 h-[2px] mb-6 mx-2 transition-all duration-300 ${
+                      currentStep > step.num ? "bg-indigo-500" : "bg-white/10"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-neutral-900/40 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+            {/* Step 1: Business Basics */}
             {currentStep === 1 && (
               <>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    value={formData.ownerName}
-                    onChange={(e) => updateField("ownerName", e.target.value)}
-                    className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Job Title *</label>
-                  <input
-                    type="text"
-                    value={formData.jobTitle}
-                    onChange={(e) => updateField("jobTitle", e.target.value)}
-                    className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="CEO, Developer, Designer..."
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Business Logo</label>
-                  <div className="flex items-center space-x-4">
-                    {logoPreview ? (
-                      <img
-                        src={logoPreview || "/placeholder.svg"}
-                        alt="Logo preview"
-                        className="w-16 h-16 rounded-full object-cover border-2 border-[#333333]"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-[#232323] border-2 border-[#333333] flex items-center justify-center">
-                        <Upload className="w-6 h-6 text-gray-500" />
-                      </div>
-                    )}
-                    <label className="flex-1 cursor-pointer">
-                      <div className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-400 hover:bg-[#2a2a2a] text-center">
-                        {formData.logoFile ? formData.logoFile.name : "Choose file"}
-                      </div>
-                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                    </label>
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium mb-4">
+                    <Building2 className="w-3 h-3" />
+                    STEP 1 OF 4
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Upload your company logo or profile picture</p>
+                  <h1 className="text-2xl font-medium text-white mb-2">Tell us about your business</h1>
+                  <p className="text-neutral-400 text-sm">We'll use this to find your ideal prospects</p>
                 </div>
-              </>
-            )}
 
-            {currentStep === 2 && (
-              <>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Business Name *</label>
-                  <input
-                    type="text"
-                    value={formData.businessName}
-                    onChange={(e) => updateField("businessName", e.target.value)}
-                    className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Acme Corporation"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Street Address *</label>
-                  <input
-                    type="text"
-                    value={formData.street}
-                    onChange={(e) => updateField("street", e.target.value)}
-                    className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="123 Main Street"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-5">
                   <div>
-                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">City *</label>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Website URL <span className="text-indigo-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                      <input
+                        type="text"
+                        value={formData.website_url}
+                        onChange={(e) => updateField("website_url", e.target.value)}
+                        placeholder="yourcompany.com"
+                        className="w-full bg-black/50 border border-white/10 text-white pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all text-sm placeholder:text-neutral-600"
+                      />
+                    </div>
+                    <p className="text-neutral-500 text-xs mt-2">
+                      <Sparkles className="w-3 h-3 inline mr-1" />
+                      AI will analyze your website to understand your business
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Business Name <span className="text-indigo-400">*</span>
+                    </label>
                     <input
                       type="text"
-                      value={formData.city}
-                      onChange={(e) => updateField("city", e.target.value)}
-                      className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="San Francisco"
-                      required
+                      value={formData.business_name}
+                      onChange={(e) => updateField("business_name", e.target.value)}
+                      placeholder="Acme Corporation"
+                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">State *</label>
-                    <select
-                      value={formData.state}
-                      onChange={(e) => updateField("state", e.target.value)}
-                      className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="">Select</option>
-                      {STATES.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Industry <span className="text-indigo-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={formData.industry}
+                        onChange={(e) => updateField("industry", e.target.value)}
+                        className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 appearance-none cursor-pointer text-sm"
+                      >
+                        <option value="" className="bg-neutral-900">
+                          Select your industry
                         </option>
-                      ))}
-                    </select>
+                        {industries.map((ind) => (
+                          <option key={ind} value={ind} className="bg-neutral-900">
+                            {ind}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 pointer-events-none" />
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">ZIP Code *</label>
-                  <input
-                    type="text"
-                    value={formData.zip}
-                    onChange={(e) => updateField("zip", e.target.value)}
-                    className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="94102"
-                    maxLength={5}
-                    required
-                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Company Size</label>
+                      <select
+                        value={formData.company_size}
+                        onChange={(e) => updateField("company_size", e.target.value)}
+                        className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 appearance-none cursor-pointer text-sm"
+                      >
+                        <option value="" className="bg-neutral-900">
+                          Select size
+                        </option>
+                        {companySizes.map((size) => (
+                          <option key={size} value={size} className="bg-neutral-900">
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Year Founded</label>
+                      <input
+                        type="number"
+                        value={formData.year_founded}
+                        onChange={(e) => updateField("year_founded", e.target.value)}
+                        placeholder="2020"
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600"
+                      />
+                    </div>
+                  </div>
                 </div>
               </>
             )}
 
+            {/* Step 2: Target Customer */}
+            {currentStep === 2 && (
+              <>
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs font-medium mb-4">
+                    <Target className="w-3 h-3" />
+                    STEP 2 OF 4
+                  </div>
+                  <h1 className="text-2xl font-medium text-white mb-2">Who is your ideal customer?</h1>
+                  <p className="text-neutral-400 text-sm">Help us find the perfect prospects for your business</p>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-3">
+                      What type of customers do you serve? <span className="text-indigo-400">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: "B2B", label: "B2B", desc: "Sell to businesses" },
+                        { value: "B2C", label: "B2C", desc: "Sell to consumers" },
+                        { value: "Both", label: "Both", desc: "Sell to both" },
+                      ].map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => updateField("target_customer_type", type.value)}
+                          className={`p-4 rounded-xl border text-left transition-all ${
+                            formData.target_customer_type === type.value
+                              ? "bg-indigo-500/20 border-indigo-500/50 text-white"
+                              : "bg-black/30 border-white/10 text-neutral-400 hover:border-white/20"
+                          }`}
+                        >
+                          <p className="font-medium text-white">{type.label}</p>
+                          <p className="text-xs mt-1 text-neutral-400">{type.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-3">
+                      Target Industries <span className="text-neutral-500">(Select all that apply)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                      {industries.map((ind) => (
+                        <button
+                          key={ind}
+                          type="button"
+                          onClick={() => toggleSelection("target_industries", ind)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                            formData.target_industries.includes(ind)
+                              ? "bg-indigo-500/20 border border-indigo-500/50 text-indigo-300"
+                              : "bg-black/30 border border-white/10 text-neutral-400 hover:border-white/20"
+                          }`}
+                        >
+                          {ind}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-3">Target Job Titles</label>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {commonJobTitles.slice(0, 6).map((title) => (
+                        <button
+                          key={title}
+                          type="button"
+                          onClick={() => toggleSelection("target_job_titles", title)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                            formData.target_job_titles.includes(title)
+                              ? "bg-indigo-500/20 border border-indigo-500/50 text-indigo-300"
+                              : "bg-black/30 border border-white/10 text-neutral-400 hover:border-white/20"
+                          }`}
+                        >
+                          {title}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.custom_job_titles}
+                      onChange={(e) => updateField("custom_job_titles", e.target.value)}
+                      placeholder="Or enter custom titles (comma-separated)"
+                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-2 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-3">Target Locations</label>
+                    <div className="flex flex-wrap gap-2">
+                      {regions.map((region) => (
+                        <button
+                          key={region}
+                          type="button"
+                          onClick={() => toggleSelection("target_locations", region)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                            formData.target_locations.includes(region)
+                              ? "bg-indigo-500/20 border border-indigo-500/50 text-indigo-300"
+                              : "bg-black/30 border border-white/10 text-neutral-400 hover:border-white/20"
+                          }`}
+                        >
+                          {region}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Step 3: Value Proposition */}
             {currentStep === 3 && (
               <>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Business Email *</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => updateField("email", e.target.value)}
-                    className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="john@example.com"
-                    required
-                  />
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-medium mb-4">
+                    <Briefcase className="w-3 h-3" />
+                    STEP 3 OF 4
+                  </div>
+                  <h1 className="text-2xl font-medium text-white mb-2">What value do you provide?</h1>
+                  <p className="text-neutral-400 text-sm">Help us craft compelling outreach messages</p>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Phone Number *</label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => updateField("phone", e.target.value)}
-                    className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="+1 (555) 123-4567"
-                    required
-                  />
-                </div>
-                <div className="pt-2 border-t border-[#232323]">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Social Media Links (Optional)</p>
-                  <div className="space-y-3">
-                    <input
-                      type="url"
-                      value={formData.linkedinUrl}
-                      onChange={(e) => updateField("linkedinUrl", e.target.value)}
-                      className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      placeholder="LinkedIn URL"
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      What services or products do you offer?
+                    </label>
+                    <textarea
+                      value={formData.services_offered}
+                      onChange={(e) => updateField("services_offered", e.target.value)}
+                      placeholder="E.g., We provide cloud-based accounting software for small businesses..."
+                      rows={3}
+                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600 resize-none"
                     />
-                    <input
-                      type="url"
-                      value={formData.twitterUrl}
-                      onChange={(e) => updateField("twitterUrl", e.target.value)}
-                      className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      placeholder="Twitter/X URL"
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">What makes you unique?</label>
+                    <textarea
+                      value={formData.unique_selling_points}
+                      onChange={(e) => updateField("unique_selling_points", e.target.value)}
+                      placeholder="E.g., 10x faster setup, AI-powered insights, 24/7 support..."
+                      rows={3}
+                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600 resize-none"
                     />
-                    <input
-                      type="url"
-                      value={formData.githubUrl}
-                      onChange={(e) => updateField("githubUrl", e.target.value)}
-                      className="w-full bg-[#232323] border border-[#333333] rounded-md px-3 py-2 text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      placeholder="GitHub URL"
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      What problems do you solve for customers?
+                    </label>
+                    <textarea
+                      value={formData.customer_pain_points}
+                      onChange={(e) => updateField("customer_pain_points", e.target.value)}
+                      placeholder="E.g., Eliminates manual data entry, reduces accounting errors, saves 10 hours per week..."
+                      rows={3}
+                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600 resize-none"
                     />
                   </div>
                 </div>
               </>
             )}
 
+            {/* Step 4: Outreach Preferences */}
             {currentStep === 4 && (
-              <div className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-white mb-1">Review Your Information</h3>
-                  <p className="text-sm text-gray-400">Please verify your details before completing setup</p>
+              <>
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs font-medium mb-4">
+                    <Mail className="w-3 h-3" />
+                    STEP 4 OF 4
+                  </div>
+                  <h1 className="text-2xl font-medium text-white mb-2">Outreach preferences</h1>
+                  <p className="text-neutral-400 text-sm">Customize how AI writes your emails</p>
                 </div>
 
-                <div className="bg-[#1a1a1a] rounded-lg p-4 space-y-3 border border-[#232323]">
+                <div className="space-y-6">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Profile</p>
-                    <p className="text-gray-300 text-sm">
-                      {formData.ownerName} - {formData.jobTitle}
-                    </p>
-                  </div>
-
-                  <div className="border-t border-[#232323] pt-3">
-                    <p className="text-xs text-gray-500 uppercase">Business</p>
-                    <p className="text-gray-300 text-sm">{formData.businessName}</p>
-                    <p className="text-gray-400 text-xs">
-                      {formData.street}, {formData.city}, {formData.state} {formData.zip}
-                    </p>
-                  </div>
-
-                  <div className="border-t border-[#232323] pt-3">
-                    <p className="text-xs text-gray-500 uppercase">Contact</p>
-                    <p className="text-gray-300 text-sm">{formData.email}</p>
-                    <p className="text-gray-400 text-xs">{formData.phone}</p>
-                  </div>
-
-                  {(formData.linkedinUrl || formData.twitterUrl || formData.githubUrl) && (
-                    <div className="border-t border-[#232323] pt-3">
-                      <p className="text-xs text-gray-500 uppercase mb-1">Social Links</p>
-                      <div className="flex flex-wrap gap-2">
-                        {formData.linkedinUrl && <span className="text-xs text-blue-400">LinkedIn</span>}
-                        {formData.twitterUrl && <span className="text-xs text-blue-400">Twitter</span>}
-                        {formData.githubUrl && <span className="text-xs text-blue-400">GitHub</span>}
-                      </div>
+                    <label className="block text-sm font-medium text-white mb-3">Email Tone</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: "professional", label: "Professional", desc: "Formal & polished" },
+                        { value: "friendly", label: "Friendly", desc: "Warm & conversational" },
+                        { value: "direct", label: "Direct", desc: "Brief & to the point" },
+                      ].map((tone) => (
+                        <button
+                          key={tone.value}
+                          type="button"
+                          onClick={() => updateField("email_tone", tone.value)}
+                          className={`p-4 rounded-xl border text-left transition-all ${
+                            formData.email_tone === tone.value
+                              ? "bg-indigo-500/20 border-indigo-500/50 text-white"
+                              : "bg-black/30 border-white/10 text-neutral-400 hover:border-white/20"
+                          }`}
+                        >
+                          <p className="font-medium text-white text-sm">{tone.label}</p>
+                          <p className="text-xs mt-1 text-neutral-400">{tone.desc}</p>
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                <p className="text-xs text-gray-500 text-center">
-                  By completing setup, you agree to receive AI-powered lead generation insights
-                </p>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-3">Email Length</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { value: "concise", label: "Concise", desc: "2-3 short paragraphs" },
+                        { value: "detailed", label: "Detailed", desc: "4-5 comprehensive paragraphs" },
+                      ].map((style) => (
+                        <button
+                          key={style.value}
+                          type="button"
+                          onClick={() => updateField("email_style", style.value)}
+                          className={`p-4 rounded-xl border text-left transition-all ${
+                            formData.email_style === style.value
+                              ? "bg-indigo-500/20 border-indigo-500/50 text-white"
+                              : "bg-black/30 border-white/10 text-neutral-400 hover:border-white/20"
+                          }`}
+                        >
+                          <p className="font-medium text-white text-sm">{style.label}</p>
+                          <p className="text-xs mt-1 text-neutral-400">{style.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-3">Include in emails</label>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-white/10 cursor-pointer hover:border-white/20 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={formData.include_case_studies}
+                          onChange={(e) => updateField("include_case_studies", e.target.checked)}
+                          className="w-4 h-4 rounded border-white/20 bg-black/50 text-indigo-500 focus:ring-indigo-500/20"
+                        />
+                        <div>
+                          <p className="text-white text-sm font-medium">Case studies & success stories</p>
+                          <p className="text-neutral-400 text-xs">
+                            Share examples of how you've helped similar companies
+                          </p>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-white/10 cursor-pointer hover:border-white/20 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={formData.include_pricing}
+                          onChange={(e) => updateField("include_pricing", e.target.checked)}
+                          className="w-4 h-4 rounded border-white/20 bg-black/50 text-indigo-500 focus:ring-indigo-500/20"
+                        />
+                        <div>
+                          <p className="text-white text-sm font-medium">Pricing information</p>
+                          <p className="text-neutral-400 text-xs">
+                            Include transparent pricing or offer to discuss costs
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             {error && (
-              <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-md p-2">{error}</div>
-            )}
-          </div>
-
-          <div className="px-6 py-4 border-t border-[#232323] flex justify-between">
-            {currentStep > 1 ? (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="px-4 py-2 border border-[#333333] text-gray-300 text-sm rounded-md hover:bg-[#1a1a1a]"
-              >
-                Back
-              </button>
-            ) : (
-              <div />
+              <div className="mt-6 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                {error}
+              </div>
             )}
 
-            {currentStep < 4 ? (
+            {/* Navigation */}
+            <div className="mt-8 flex justify-between items-center">
+              {currentStep > 1 ? (
+                <button
+                  onClick={handleBack}
+                  type="button"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-all text-sm"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </button>
+              ) : (
+                <div />
+              )}
+
               <button
-                type="button"
                 onClick={handleNext}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md"
-              >
-                Continue
-              </button>
-            ) : (
-              <button
-                type="submit"
                 disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md disabled:opacity-50"
+                type="button"
+                className="group relative inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-neutral-800 disabled:text-neutral-500 text-white font-medium transition-all disabled:cursor-not-allowed text-sm"
               >
-                {isLoading ? "Saving..." : "Complete Setup"}
+                {currentStep === 4 ? (
+                  isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Complete Setup
+                      <Sparkles className="w-4 h-4" />
+                    </>
+                  )
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
               </button>
-            )}
+            </div>
           </div>
-        </form>
+
+          <p className="text-center text-neutral-500 text-sm mt-6">
+            Need help?{" "}
+            <a href="mailto:support@leadsite.ai" className="text-indigo-400 hover:text-indigo-300">
+              Contact support
+            </a>
+          </p>
+        </div>
       </div>
+
+      <style jsx>{`
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }
