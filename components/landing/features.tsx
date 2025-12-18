@@ -5,7 +5,7 @@ const features = [
     icon: Sparkles,
     title: "AI Prospect Discovery",
     description:
-      "Our AI finds 20-50 qualified prospects daily using Google Maps and Apollo.io, perfectly matched to your business.",
+      "Our AI discovers 20-50 qualified prospects daily, perfectly matched to your ideal customer profile. Location-based search with verified contact enrichment.",
     iconColor: "text-indigo-400",
     iconBg: "bg-indigo-500/10",
   },

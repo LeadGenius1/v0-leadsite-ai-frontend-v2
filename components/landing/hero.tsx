@@ -30,8 +30,8 @@ export function Hero() {
 
         {/* Subheadline */}
         <p className="text-sm sm:text-base md:text-lg text-gray-400 max-w-2xl mx-auto mb-5 sm:mb-6 leading-relaxed px-4">
-          AI-powered prospect discovery and personalized outreach. Install once, generate qualified leads forever. No
-          manual work required.
+          Enter your website URL and let AI find your ideal customers. Personalized outreach sent automatically. No
+          technical setup required.
         </p>
 
         {/* CTA */}
@@ -59,6 +59,12 @@ export function Hero() {
               @property --gradient-shine {
                 syntax: "<color>";
                 initial-value: #8484ff;
+                inherits: false;
+              }
+
+              @property --shadow-size {
+                syntax: "<length>";
+                initial-value: 2px;
                 inherits: false;
               }
 
@@ -213,16 +219,16 @@ export function Hero() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 sm:gap-6 mt-10 sm:mt-12 max-w-2xl mx-auto">
           <div className="text-center">
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">10K+</div>
-            <div className="text-[10px] sm:text-xs text-gray-500 mt-1">Active Users</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">500+</div>
+            <div className="text-[10px] sm:text-xs text-gray-500 mt-1">Businesses Served</div>
           </div>
           <div className="text-center">
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">5M+</div>
-            <div className="text-[10px] sm:text-xs text-gray-500 mt-1">Leads Generated</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">50K+</div>
+            <div className="text-[10px] sm:text-xs text-gray-500 mt-1">Prospects Found</div>
           </div>
           <div className="text-center">
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">98%</div>
-            <div className="text-[10px] sm:text-xs text-gray-500 mt-1">Satisfaction</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">40%</div>
+            <div className="text-[10px] sm:text-xs text-gray-500 mt-1">Avg Reply Rate</div>
           </div>
         </div>
       </div>

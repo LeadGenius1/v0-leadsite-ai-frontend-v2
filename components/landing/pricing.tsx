@@ -2,11 +2,28 @@
 
 import type React from "react"
 
-import { Check, X } from "lucide-react"
+import { Check, Clock } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+
+const FeatureItem = ({
+  available,
+  text,
+}: {
+  available: boolean
+  text: string
+}) => (
+  <li className={`flex items-center gap-2 text-xs ${available ? "text-neutral-300" : "text-neutral-500"}`}>
+    {available ? (
+      <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
+    ) : (
+      <Clock className="w-3 h-3 text-neutral-600 flex-shrink-0" />
+    )}
+    <span className="flex-1">{text}</span>
+  </li>
+)
 
 const plans = [
   {
@@ -15,13 +32,14 @@ const plans = [
     period: "/month",
     description: "Perfect for small businesses getting started",
     features: [
-      { text: "1 active campaign", included: true },
-      { text: "1,000 leads/month", included: true },
-      { text: "Basic email analytics", included: true },
-      { text: "AI prospect discovery", included: true },
-      { text: "Email support", included: true },
-      { text: "Custom email domains", included: false },
-      { text: "API access", included: false },
+      { text: "1 active campaign", available: true },
+      { text: "1,000 prospects/month", available: true },
+      { text: "AI prospect discovery", available: true },
+      { text: "AI-written emails", available: true },
+      { text: "Basic analytics dashboard", available: true },
+      { text: "Email support", available: true },
+      { text: "Custom email domains", available: false },
+      { text: "API access", available: false },
     ],
     buttonText: "Start 14-Day Free Trial",
     buttonColor: "indigo",
@@ -34,13 +52,15 @@ const plans = [
     period: "/month",
     description: "For growing businesses that need more",
     features: [
-      { text: "5 active campaigns", included: true },
-      { text: "5,000 leads/month", included: true },
-      { text: "Advanced analytics & insights", included: true },
-      { text: "AI prospect discovery", included: true },
-      { text: "Priority email support", included: true },
-      { text: "Custom email domains", included: true },
-      { text: "API access", included: false },
+      { text: "5 active campaigns", available: true },
+      { text: "5,000 prospects/month", available: true },
+      { text: "AI prospect discovery", available: true },
+      { text: "AI-written emails", available: true },
+      { text: "Advanced analytics & insights", available: true },
+      { text: "Priority email support", available: true },
+      { text: "Hot lead alerts", available: true },
+      { text: "Custom email domains", available: false },
+      { text: "API access", available: false },
     ],
     buttonText: "Start 14-Day Free Trial",
     buttonColor: "purple",
@@ -53,13 +73,16 @@ const plans = [
     period: "/month",
     description: "For teams with high-volume needs",
     features: [
-      { text: "Unlimited campaigns", included: true },
-      { text: "20,000 leads/month", included: true },
-      { text: "Real-time AI analytics", included: true },
-      { text: "Advanced prospect discovery", included: true },
-      { text: "24/7 phone & email support", included: true },
-      { text: "Custom email domains", included: true },
-      { text: "Full API access", included: true },
+      { text: "Unlimited campaigns", available: true },
+      { text: "20,000 prospects/month", available: true },
+      { text: "Advanced AI discovery", available: true },
+      { text: "AI-written emails", available: true },
+      { text: "Real-time analytics", available: true },
+      { text: "Sentiment analysis", available: true },
+      { text: "24/7 priority support", available: true },
+      { text: "Hot lead alerts", available: true },
+      { text: "Custom email domains", available: true },
+      { text: "API access", available: true },
     ],
     buttonText: "Start 14-Day Free Trial",
     buttonColor: "cyan",
@@ -72,14 +95,14 @@ const plans = [
     period: "pricing",
     description: "For enterprises with unique requirements",
     features: [
-      { text: "Everything in Accelerate", included: true },
-      { text: "White-label solution", included: true },
-      { text: "Custom N8N workflows", included: true },
-      { text: "Dedicated Instantly.ai account", included: true },
-      { text: "Volume discounts", included: true },
-      { text: "SLA guarantees", included: true },
-      { text: "Custom integrations", included: true },
-      { text: "Dedicated success team", included: true },
+      { text: "Everything in Accelerate", available: true },
+      { text: "White-label solution", available: true },
+      { text: "Custom automation workflows", available: true },
+      { text: "Dedicated email infrastructure", available: true },
+      { text: "Volume discounts", available: true },
+      { text: "SLA guarantees", available: true },
+      { text: "Custom integrations", available: true },
+      { text: "Dedicated success team", available: true },
     ],
     buttonText: "Contact Sales",
     buttonColor: "neutral",
@@ -231,18 +254,7 @@ export function Pricing() {
 
               <ul className="space-y-1.5 sm:space-y-2 mb-5">
                 {plan.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="flex items-center gap-2">
-                    {feature.included ? (
-                      <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
-                    ) : (
-                      <X className="w-3 h-3 text-neutral-600 flex-shrink-0" />
-                    )}
-                    <span
-                      className={`text-[10px] sm:text-xs ${feature.included ? "text-neutral-300" : "text-neutral-500"}`}
-                    >
-                      {feature.text}
-                    </span>
-                  </li>
+                  <FeatureItem key={featureIndex} available={feature.available} text={feature.text} />
                 ))}
               </ul>
 
