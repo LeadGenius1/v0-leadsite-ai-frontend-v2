@@ -14,7 +14,6 @@ import {
   LayoutDashboard,
   BrainCircuit,
   Zap,
-  ChevronRight,
   Plus,
   Clock,
   TrendingUp,
@@ -251,7 +250,11 @@ export default function DashboardPage() {
       if (data.stats) {
         setQuickStats(data.stats)
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message?.includes("404") || error.message?.includes("Not Found")) {
+        // Use fallback data - endpoint doesn't exist yet
+        return
+      }
       console.error("Error fetching quick stats:", error)
     }
   }
@@ -262,7 +265,12 @@ export default function DashboardPage() {
       if (data.activities) {
         setActivities(data.activities)
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message?.includes("404") || error.message?.includes("Not Found")) {
+        // Use empty array fallback - endpoint doesn't exist yet
+        setActivities([])
+        return
+      }
       console.error("Error fetching activities:", error)
     }
   }
@@ -521,465 +529,473 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F1419] text-white relative overflow-hidden">
-      {/* Space Background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
+    <div className="min-h-screen bg-black text-white relative overflow-hidden font-sans">
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        {/* Animated Stars */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div
+            className="stars absolute w-[1px] h-[1px] bg-transparent rounded-full opacity-50"
+            style={{
+              boxShadow:
+                "1744px 122px #FFF, 134px 1321px #FFF, 92px 859px #FFF, 500px 400px #FFF, 1200px 800px #FFF, 300px 200px #FFF, 800px 600px #FFF, 1500px 1000px #FFF",
+              animation: "animStar 50s linear infinite",
+            }}
+          />
+        </div>
+
+        {/* Subtle Grid */}
         <div
-          className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "1s" }}
+          className="absolute inset-0 opacity-[0.15]"
+          style={{
+            backgroundSize: "40px 40px",
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+          }}
+        />
+
+        {/* Glow Blobs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-900/20 rounded-full blur-[120px] animate-pulse" />
+        <div
+          className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[120px] animate-pulse"
+          style={{ animationDelay: "2s" }}
         />
       </div>
 
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg backdrop-blur-xl border
-          ${toast.type === "success" ? "bg-green-900/40 border-green-500/50 text-green-100" : ""}
-          ${toast.type === "error" ? "bg-red-900/40 border-red-500/50 text-red-100" : ""}
-          ${toast.type === "warning" ? "bg-yellow-900/40 border-yellow-500/50 text-yellow-100" : ""}
-          ${toast.type === "info" ? "bg-blue-900/40 border-blue-500/50 text-blue-100" : ""}
-        `}
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg backdrop-blur-md flex items-center gap-3 ${
+            toast.type === "success"
+              ? "bg-green-500/10 border border-green-500/20 text-green-400"
+              : toast.type === "error"
+                ? "bg-red-500/10 border border-red-500/20 text-red-400"
+                : toast.type === "warning"
+                  ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400"
+                  : "bg-blue-500/10 border border-blue-500/20 text-blue-400"
+          }`}
         >
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">{toast.message}</span>
-          </div>
+          <AlertCircle className="w-5 h-5" />
+          <span className="text-sm">{toast.message}</span>
         </div>
       )}
 
       <div className="flex relative z-10">
-        {/* Sidebar */}
-        <div className="w-64 min-h-screen bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 flex flex-col">
-          {/* Profile Section */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              {profile?.logo_base64 ? (
-                <img
-                  src={profile.logo_base64 || "/placeholder.svg"}
-                  alt="Logo"
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center">
-                  <span className="text-lg font-bold">{profile?.name?.charAt(0) || "U"}</span>
-                </div>
-              )}
-              <div>
-                <h2 className="text-sm font-semibold">{profile?.name}</h2>
-                <p className="text-xs text-gray-400">{profile?.job_title}</p>
-              </div>
+        <aside className="w-64 bg-black/50 backdrop-blur-md border-r border-white/5 flex flex-col">
+          {/* Logo */}
+          <div className="p-6 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full" />
+              <span className="text-lg font-medium tracking-wider">LeadSite.AI</span>
             </div>
-            <p className="text-xs text-gray-500">{profile?.business_name}</p>
-            {trialDaysLeft > 0 && (
-              <div className="mt-2 px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-xs text-yellow-200">
-                Trial: {trialDaysLeft} days left
-              </div>
-            )}
           </div>
 
           {/* Navigation */}
-          <nav className="space-y-2 flex-1">
+          <nav className="flex-1 p-4 space-y-2">
             <button
               onClick={() => setActiveSection("dashboard")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
                 activeSection === "dashboard"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-white"
-                  : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  ? "bg-white/10 text-white border border-white/10"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
             >
-              <LayoutDashboard className="w-4 h-4" />
+              <LayoutDashboard className="w-5 h-5" />
               Dashboard
             </button>
 
             <button
               onClick={() => setActiveSection("targeting")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
                 activeSection === "targeting"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-white"
-                  : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  ? "bg-white/10 text-white border border-white/10"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
             >
-              <Target className="w-4 h-4" />
+              <Target className="w-5 h-5" />
               Targeting
             </button>
 
             <button
               onClick={() => setActiveSection("contact")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
                 activeSection === "contact"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-white"
-                  : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  ? "bg-white/10 text-white border border-white/10"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
             >
-              <Mail className="w-4 h-4" />
+              <Mail className="w-5 h-5" />
               Contact
             </button>
 
             <button
               onClick={() => setActiveSection("settings")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
                 activeSection === "settings"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-white"
-                  : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  ? "bg-white/10 text-white border border-white/10"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-5 h-5" />
               Settings
             </button>
           </nav>
 
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all mt-4"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
-        </div>
+          {/* User Profile */}
+          <div className="p-4 border-t border-white/5">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
+              {profile?.logo_base64 ? (
+                <img
+                  src={profile.logo_base64 || "/placeholder.svg"}
+                  alt="Logo"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                  {profile?.name?.charAt(0) || "U"}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{profile?.name}</p>
+                <p className="text-xs text-neutral-500 truncate">{profile?.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        </aside>
 
         {/* Main Content */}
         <div className="flex-1 p-8 overflow-y-auto max-h-screen">
-          {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold mb-2">
-              <span className="text-cyan-400">Welcome back,</span> {profile?.email || profile?.name}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium tracking-wide mb-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+              </span>
+              DASHBOARD ACTIVE
+            </div>
+
+            <h1 className="text-3xl md:text-4xl font-medium tracking-tight bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent mb-2">
+              Welcome back, {profile?.name || profile?.email}
             </h1>
-            <p className="text-sm text-gray-400">
-              {activeSection === "dashboard" && "Here's your AI-powered lead generation overview"}
-              {activeSection === "targeting" && "Manage your target audience and discovery settings"}
-              {activeSection === "contact" && "View and manage your campaigns and prospects"}
-              {activeSection === "settings" && "Configure your automation settings"}
-            </p>
+
+            <p className="text-neutral-400 text-sm font-light">Here's your AI-powered lead generation overview</p>
           </div>
 
-          {/* Dashboard Section */}
+          {/* Dashboard Tab */}
           {activeSection === "dashboard" && (
             <div className="space-y-8">
-              {/* Quick Stats - 6 Cards */}
               <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  <span className="text-purple-400">Quick</span> Stats
-                </h2>
+                <h2 className="text-lg font-semibold mb-4 text-white">Quick Stats</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-cyan-500/30 transition-all group">
-                    <div className="flex items-center justify-between mb-2">
-                      <Target className="w-5 h-5 text-cyan-400" />
-                      <TrendingUp className="w-4 h-4 text-green-400" />
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-indigo-400">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <p className="text-3xl font-medium text-white mb-1">{quickStats.totalProspects}</p>
+                      <p className="text-sm text-neutral-400 font-light">Total Prospects</p>
                     </div>
-                    <div className="text-2xl font-bold text-white mb-1">{quickStats.totalProspects}</div>
-                    <div className="text-xs text-gray-400">Prospects Discovered</div>
                   </div>
 
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-purple-500/30 transition-all group">
-                    <div className="flex items-center justify-between mb-2">
-                      <Send className="w-5 h-5 text-purple-400" />
-                      <TrendingUp className="w-4 h-4 text-green-400" />
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-purple-400">
+                        <Send className="w-5 h-5" />
+                      </div>
+                      <p className="text-3xl font-medium text-white mb-1">{quickStats.emailsSent}</p>
+                      <p className="text-sm text-neutral-400 font-light">Emails Sent</p>
                     </div>
-                    <div className="text-2xl font-bold text-white mb-1">{quickStats.emailsSent}</div>
-                    <div className="text-xs text-gray-400">Emails Sent</div>
                   </div>
 
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-indigo-500/30 transition-all group">
-                    <div className="flex items-center justify-between mb-2">
-                      <Eye className="w-5 h-5 text-indigo-400" />
-                      <span className="text-xs text-indigo-300">{quickStats.openRate}%</span>
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-cyan-400">
+                        <Eye className="w-5 h-5" />
+                      </div>
+                      <p className="text-3xl font-medium text-white mb-1">{quickStats.openRate}%</p>
+                      <p className="text-sm text-neutral-400 font-light">Open Rate</p>
                     </div>
-                    <div className="text-2xl font-bold text-white mb-1">{quickStats.openRate}%</div>
-                    <div className="text-xs text-gray-400">Open Rate</div>
                   </div>
 
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-green-500/30 transition-all group">
-                    <div className="flex items-center justify-between mb-2">
-                      <MessageCircle className="w-5 h-5 text-green-400" />
-                      <TrendingUp className="w-4 h-4 text-green-400" />
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-green-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-green-400">
+                        <MessageCircle className="w-5 h-5" />
+                      </div>
+                      <p className="text-3xl font-medium text-white mb-1">{quickStats.replies}</p>
+                      <p className="text-sm text-neutral-400 font-light">Replies</p>
                     </div>
-                    <div className="text-2xl font-bold text-white mb-1">{quickStats.replies}</div>
-                    <div className="text-xs text-gray-400">Replies</div>
                   </div>
 
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-yellow-500/30 transition-all group">
-                    <div className="flex items-center justify-between mb-2">
-                      <Zap className="w-5 h-5 text-yellow-400" />
-                      <TrendingUp className="w-4 h-4 text-yellow-400" />
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-yellow-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-yellow-400">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                      <p className="text-3xl font-medium text-white mb-1">{quickStats.hotLeads}</p>
+                      <p className="text-sm text-neutral-400 font-light">Hot Leads</p>
                     </div>
-                    <div className="text-2xl font-bold text-white mb-1">{quickStats.hotLeads}</div>
-                    <div className="text-xs text-gray-400">Hot Leads</div>
                   </div>
 
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-blue-500/30 transition-all group">
-                    <div className="flex items-center justify-between mb-2">
-                      <MousePointerClick className="w-5 h-5 text-blue-400" />
-                      <span className="text-xs text-blue-300">{quickStats.deliveryRate}%</span>
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-blue-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-blue-400">
+                        <TrendingUp className="w-5 h-5" />
+                      </div>
+                      <p className="text-3xl font-medium text-white mb-1">{quickStats.deliveryRate}%</p>
+                      <p className="text-sm text-neutral-400 font-light">Delivery Rate</p>
                     </div>
-                    <div className="text-2xl font-bold text-white mb-1">{quickStats.deliveryRate}%</div>
-                    <div className="text-xs text-gray-400">Delivery Rate</div>
                   </div>
                 </div>
               </div>
 
-              {/* AI-Powered Actions - 4 Cards */}
               <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  <span className="text-cyan-400">AI-Powered</span> Actions
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Analyze Business Card */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-cyan-500/30 transition-all group">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-cyan-500/20 rounded-lg">
-                        <BrainCircuit className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-lg font-semibold mb-4 text-white">AI-Powered Actions</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Analyze Business */}
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4 text-cyan-400 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-shadow">
+                        <BrainCircuit className="w-6 h-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-base">Analyze Business</h3>
-                        <p className="text-xs text-gray-400 mt-1">
-                          AI analyzes your website to understand your market and ideal customers
-                        </p>
+                      <h3 className="text-lg font-medium text-white mb-2">Analyze Business</h3>
+                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
+                        AI analyzes your website to understand your market and ideal customers
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
+                          AI-Powered
+                        </span>
                       </div>
+                      <button
+                        onClick={handleAnalyzeBusiness}
+                        disabled={isAnalyzing}
+                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#22d3ee_50%,#000_100%)]" />
+                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
+                          {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          {isAnalyzing ? "Analyzing..." : "Analyze"}
+                        </span>
+                      </button>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded">AI-Powered</span>
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">Insights</span>
-                    </div>
-                    <button
-                      onClick={handleAnalyzeBusiness}
-                      disabled={isAnalyzing}
-                      className="w-full py-2 px-4 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white text-sm rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isAnalyzing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <BrainCircuit className="w-4 h-4" />
-                          Analyze Now
-                        </>
-                      )}
-                    </button>
                   </div>
 
-                  {/* Discover Prospects Card */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-purple-500/30 transition-all group">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-purple-500/20 rounded-lg">
-                        <Search className="w-6 h-6 text-purple-400" />
+                  {/* Discover Prospects */}
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4 text-purple-400 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-shadow">
+                        <Search className="w-6 h-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-base">Discover Prospects</h3>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Find businesses matching your target customer profile using AI-powered search
-                        </p>
+                      <h3 className="text-lg font-medium text-white mb-2">Discover Prospects</h3>
+                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
+                        Find businesses matching your target customer profile
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
+                          Automated
+                        </span>
                       </div>
+                      <button
+                        onClick={handleDiscoverProspects}
+                        disabled={isDiscovering}
+                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#a855f7_50%,#000_100%)]" />
+                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
+                          {isDiscovering ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          {isDiscovering ? "Discovering..." : "Discover"}
+                        </span>
+                      </button>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded">AI-Powered</span>
-                      <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded">Enrichment</span>
-                    </div>
-                    <button
-                      onClick={handleDiscoverProspects}
-                      disabled={isDiscovering}
-                      className="w-full py-2 px-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-sm rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isDiscovering ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Discovering...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4" />
-                          Discover Now
-                        </>
-                      )}
-                    </button>
                   </div>
 
-                  {/* Generate Emails Card */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-indigo-500/30 transition-all group">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-indigo-500/20 rounded-lg">
-                        <Zap className="w-6 h-6 text-indigo-400" />
+                  {/* Generate Emails */}
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 text-indigo-400 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-shadow">
+                        <Zap className="w-6 h-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-base">Generate Emails</h3>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Create personalized outreach emails using AI based on your business profile
-                        </p>
+                      <h3 className="text-lg font-medium text-white mb-2">Generate Emails</h3>
+                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
+                        Create personalized outreach emails using AI
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
+                          Personalized
+                        </span>
                       </div>
+                      <button
+                        onClick={handleGenerateEmails}
+                        disabled={isGenerating}
+                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#6366f1_50%,#000_100%)]" />
+                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
+                          {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          {isGenerating ? "Generating..." : "Generate"}
+                        </span>
+                      </button>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">AI-Generated</span>
-                      <span className="px-2 py-1 bg-pink-500/20 text-pink-300 text-xs rounded">Personalized</span>
-                    </div>
-                    <button
-                      onClick={handleGenerateEmails}
-                      disabled={isGenerating}
-                      className="w-full py-2 px-4 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white text-sm rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-4 h-4" />
-                          Generate Now
-                        </>
-                      )}
-                    </button>
                   </div>
 
-                  {/* Send Campaign Card */}
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 hover:border-cyan-500/30 transition-all group">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-cyan-500/20 rounded-lg">
-                        <Send className="w-6 h-6 text-cyan-400" />
+                  {/* Send Campaign */}
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4 text-cyan-400 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-shadow">
+                        <Send className="w-6 h-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-base">Send Campaign</h3>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Launch your email campaign and track opens, clicks, and replies in real-time
-                        </p>
+                      <h3 className="text-lg font-medium text-white mb-2">Send Campaign</h3>
+                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
+                        Launch your email campaign and track results
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
+                          Tracking
+                        </span>
                       </div>
+                      <button
+                        onClick={handleSendCampaign}
+                        disabled={isSending}
+                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#22d3ee_50%,#000_100%)]" />
+                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
+                          {isSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          {isSending ? "Sending..." : "Send"}
+                        </span>
+                      </button>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded">Delivery</span>
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded">Tracking</span>
-                    </div>
-                    <button
-                      onClick={handleSendCampaign}
-                      disabled={isSending}
-                      className="w-full py-2 px-4 bg-gradient-to-r from-cyan-500 to-teal-600 hover:from-cyan-600 hover:to-teal-700 text-white text-sm rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isSending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          Send Now
-                        </>
-                      )}
-                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Recent Activity */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  <span className="text-indigo-400">Recent</span> Activity
-                </h2>
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6">
-                  {activities.length > 0 ? (
-                    <div className="space-y-4">
-                      {activities.map((activity, idx) => (
-                        <div key={idx} className="flex items-start gap-3 pb-4 border-b border-white/5 last:border-0">
-                          <div className="mt-1">{getActivityIcon(activity.type)}</div>
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-200">{activity.description}</p>
-                            <p className="text-xs text-gray-500 mt-1">{getRelativeTime(activity.timestamp)}</p>
+              <div className="rounded-2xl bg-neutral-900/30 border border-white/10 overflow-hidden">
+                <div className="relative px-6 py-4 border-b border-white/5">
+                  <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
+                  <h3 className="text-lg font-medium text-white">Recent Activity</h3>
+                  <p className="text-sm text-neutral-500">Latest updates from your campaigns</p>
+                </div>
+
+                {activities.length > 0 ? (
+                  <div className="divide-y divide-white/5">
+                    {activities.map((activity, idx) => (
+                      <div key={idx} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                            {getActivityIcon(activity.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white">{activity.description}</p>
+                            <p className="text-xs text-neutral-500">{getRelativeTime(activity.timestamp)}</p>
                           </div>
                           {activity.count > 0 && (
-                            <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded font-medium">
+                            <div className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-400">
                               +{activity.count}
-                            </span>
+                            </div>
                           )}
                         </div>
-                      ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-6 py-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+                      <Clock className="w-8 h-8 text-neutral-600" />
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-400">
-                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No recent activity</p>
-                    </div>
-                  )}
-                </div>
+                    <p className="text-neutral-400 text-sm">No recent activity</p>
+                    <p className="text-neutral-600 text-xs mt-1">Activity will appear here as you use the platform</p>
+                  </div>
+                )}
               </div>
 
-              {/* Hot Leads */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  <span className="text-yellow-400">Hot</span> Leads
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {hotLeads.length > 0 ? (
-                    hotLeads.slice(0, 3).map((lead) => (
-                      <div
-                        key={lead.id}
-                        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-4 hover:border-yellow-500/30 transition-all"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="font-semibold text-sm">{lead.contact_name}</h4>
-                            <p className="text-xs text-gray-400">{lead.company_name}</p>
+              <div className="rounded-2xl bg-neutral-900/30 border border-white/10 overflow-hidden">
+                <div className="relative px-6 py-4 border-b border-white/5">
+                  <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+                  <h3 className="text-lg font-medium text-white">Hot Leads</h3>
+                  <p className="text-sm text-neutral-500">High-intent prospects ready for outreach</p>
+                </div>
+
+                {hotLeads.length > 0 ? (
+                  <div className="divide-y divide-white/5">
+                    {hotLeads.map((lead) => (
+                      <div key={lead.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-500 to-orange-500 flex items-center justify-center text-white text-sm font-medium">
+                            {lead.contact_name.charAt(0)}
                           </div>
-                          <div className="text-xl">
-                            {lead.sentiment === "positive" && "👍"}
-                            {lead.sentiment === "neutral" && "🔥"}
-                            {lead.sentiment === "negative" && "👎"}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white">{lead.contact_name}</p>
+                            <p className="text-xs text-neutral-500">{lead.company_name}</p>
                           </div>
-                        </div>
-                        <p className="text-xs text-gray-300 mb-3 line-clamp-2">{lead.reply_text}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-cyan-400">Score: {lead.fit_score}/10</span>
-                          <button className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
-                            Reply <ChevronRight className="w-3 h-3" />
-                          </button>
+                          <div className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400">
+                            Score: {lead.fit_score}
+                          </div>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="col-span-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-8 text-center">
-                      <Users className="w-8 h-8 mx-auto mb-2 text-gray-500" />
-                      <p className="text-sm text-gray-400">No hot leads yet</p>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-6 py-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+                      <Users className="w-8 h-8 text-neutral-600" />
                     </div>
-                  )}
-                </div>
+                    <p className="text-neutral-400 text-sm">No hot leads yet</p>
+                    <p className="text-neutral-600 text-xs mt-1">Start discovering prospects to see hot leads here</p>
+                  </div>
+                )}
               </div>
 
               {/* Quick Actions Bar */}
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-4">
+              <div className="rounded-2xl bg-neutral-900/30 border border-white/10 p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <button
                     onClick={() => {
                       setActiveSection("contact")
                       setShowCreateCampaign(true)
                     }}
-                    className="flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 rounded-lg text-sm hover:from-cyan-500/30 hover:to-purple-500/30 transition-all"
+                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    New Campaign
+                    Create Campaign
                   </button>
-
                   <button
                     onClick={() => {
                       setActiveSection("contact")
                       setShowProspects(true)
                     }}
-                    className="flex items-center justify-center gap-2 py-3 px-4 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-all"
+                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
                   >
                     <Users className="w-4 h-4" />
                     View All Prospects
                   </button>
-
                   <button
                     onClick={() => setShowEmailStats(true)}
-                    className="flex items-center justify-center gap-2 py-3 px-4 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-all"
+                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
                   >
                     <TrendingUp className="w-4 h-4" />
                     Email Analytics
                   </button>
-
                   <button
                     onClick={handleProcessReplies}
-                    className="flex items-center justify-center gap-2 py-3 px-4 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-all"
+                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
                   >
                     <MessageCircle className="w-4 h-4" />
                     Process Replies

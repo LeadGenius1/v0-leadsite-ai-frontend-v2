@@ -200,6 +200,16 @@
   }
 }
 
+/* Add Aether-specific animation keyframes */
+@keyframes animStar {
+  from {
+    transform: translateY(0px);
+  }
+  to {
+    transform: translateY(-2000px);
+  }
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 8s infinite;
 }
