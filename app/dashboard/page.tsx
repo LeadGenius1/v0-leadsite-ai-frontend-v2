@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   LogOut,
@@ -10,42 +10,34 @@ import {
   X,
   Settings,
   Search,
-  Sparkles,
   Send,
-  TrendingUp,
-  Eye,
-  MessageSquare,
-  Flame,
-} from "lucide-react" // Merged: Added Settings icon and Zap icon
+  LayoutDashboard,
+  BrainCircuit,
+  Zap,
+  ChevronRight,
+} from "lucide-react"
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
 interface ProfileData {
-  id: string
-  customer_id: string
+  id: number
+  customer_id: number
+  name: string
+  job_title: string
+  logo_base64?: string
   business_name: string
   industry: string
   website: string
-  description: string | null
-  owner_name: string
-  email: string
-  phone: string
-  address: string
+  street: string
   city: string
   state: string
   zip: string
-  target_customer_type: string
-  target_location: string
-  services: string
-  unique_selling_points: string | null
-  created_at: string
-  analysis_status: string // Added from existing code
-  discovery_status: string // Added from existing code
-  trial_end_date: string // Merged: Added trial_end_date from updates
-  logo: string | null // Merged: Added logo from updates
-  street: string | null // Merged: Added street from updates
-  linkedin: string | null // Merged: Added linkedin from updates
-  twitter: string | null // Merged: Added twitter from updates
-  github: string | null // Merged: Added github from updates
-  job_title?: string // Merged: Added job_title from updates
+  email: string
+  phone: string
+  linkedin?: string
+  twitter?: string
+  github?: string
+  trial_end_date?: string
 }
 
 interface UserData {
@@ -115,6 +107,7 @@ interface Prospect {
   industry: string
   status: string
   source: string
+  email?: string // Added for consistency with email sending
 }
 
 interface HotLead {
@@ -137,8 +130,6 @@ const INDUSTRIES = [
   "Construction",
   "Other",
 ]
-
-const API_BASE_URL = "https://api.leadsite.ai" // Merged: Defined API_BASE_URL
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -321,7 +312,6 @@ export default function DashboardPage() {
       }
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        // Merged: Used API_BASE_URL
         method,
         headers: {
           "Content-Type": "application/json",
@@ -372,7 +362,6 @@ export default function DashboardPage() {
       try {
         // Get profile
         const profileRes = await fetch(`${API_BASE_URL}/api/profile`, {
-          // Merged: Used API_BASE_URL and fetch
           headers: { Authorization: `Bearer ${token}` },
         })
 
@@ -392,6 +381,7 @@ export default function DashboardPage() {
         const profileData = await profileRes.json()
         console.log("[v0] Profile data loaded:", profileData)
 
+        // Use profileData.profile for the profile object
         if (!profileData.profile) {
           console.log("[v0] No profile found, redirecting to onboarding")
           router.push("/onboarding")
@@ -411,7 +401,6 @@ export default function DashboardPage() {
 
         // Fetch schedule settings // Merged: Fetch schedule settings
         const scheduleRes = await fetch(`${API_BASE_URL}/api/schedule`, {
-          // Merged: Used API_BASE_URL
           headers: { Authorization: `Bearer ${token}` },
         })
 
@@ -677,7 +666,13 @@ export default function DashboardPage() {
 
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/api/profile/analyze`, {
+      // Removed hardcoded business ID and use selectedBusinessId
+      if (!selectedBusinessId) {
+        setActionStatus("✗ Please select a business first.")
+        setIsDiscovering(false)
+        return
+      }
+      const response = await fetch(`${API_BASE_URL}/api/businesses/${selectedBusinessId}/discover-prospects`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -690,6 +685,7 @@ export default function DashboardPage() {
         setActionStatus("✓ Prospect discovery started! Results will appear shortly.")
         // Refresh prospects after delay
         setTimeout(() => {
+          // Refresh the page to show new prospects
           window.location.reload()
         }, 3000)
       } else {
@@ -710,6 +706,13 @@ export default function DashboardPage() {
       const token = localStorage.getItem("token")
       const customerId = localStorage.getItem("customerId")
 
+      // Use selectedBusinessId to associate the campaign
+      if (!selectedBusinessId) {
+        setActionStatus("✗ Please select a business first.")
+        setIsGenerating(false)
+        return
+      }
+
       // Create campaign and trigger generation
       const campaignRes = await fetch(`${API_BASE_URL}/api/campaigns`, {
         method: "POST",
@@ -719,7 +722,7 @@ export default function DashboardPage() {
         },
         body: JSON.stringify({
           name: `Campaign ${new Date().toLocaleDateString()}`,
-          business_id: profile?.id || 1,
+          business_id: selectedBusinessId,
           customer_id: customerId,
         }),
       })
@@ -780,7 +783,6 @@ export default function DashboardPage() {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(`${API_BASE_URL}/api/schedule`, {
-        // Merged: Used API_BASE_URL
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -928,24 +930,28 @@ export default function DashboardPage() {
     },
   ]
 
-  // Conditional rendering for loading, error, and null profile
+  // Aether-style loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto mb-4" />
-          <p className="text-white text-sm">Loading dashboard...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-neutral-400 font-light">Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
+  // Aether-style error state
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error || "Profile not found"}</p>
-          <button onClick={() => router.push("/onboarding")} className="text-cyan-400 hover:text-cyan-300">
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <div className="max-w-md w-full p-8 rounded-2xl bg-neutral-900/30 border border-red-500/50 text-center">
+          <p className="text-red-400 text-sm mb-4">{error || "Profile not found"}</p>
+          <button
+            onClick={() => router.push("/onboarding")}
+            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
             Complete Onboarding →
           </button>
         </div>
@@ -954,500 +960,604 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      <div className="fixed inset-0 z-0">
-        <iframe
-          src="https://my.spline.design/untitled-34c6e90eaf33d8b6e89470b635c4f766/"
-          className="w-full h-full border-0"
-          title="3D Background"
-        />
+    // Aether-style main layout and background
+    <div className="min-h-screen bg-black text-white antialiased selection:bg-indigo-500/30 selection:text-indigo-200 overflow-x-hidden font-['Inter']">
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div
+          className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30"
+          style={{ maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)" }}
+        ></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-900/20 rounded-full blur-[120px] animate-pulse-glow"></div>
+        <div
+          className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[120px] animate-pulse-glow"
+          style={{ animationDelay: "2s" }}
+        ></div>
       </div>
 
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-10" />
-
-      <div className="relative z-20 flex min-h-screen">
-        <aside className="w-80 p-8 flex flex-col border-r border-white/10">
-          <div className="mb-12 text-center">
-            {profile.logo ? (
-              <img
-                src={profile.logo || "/placeholder.svg"}
-                alt={profile.owner_name}
-                className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-cyan-500/30"
-              />
-            ) : (
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-4xl font-bold mx-auto mb-4">
-                {profile.owner_name?.charAt(0) || "U"}
-              </div>
-            )}
-            <h2 className="text-lg font-semibold mb-1">{profile.owner_name}</h2>
-            <p className="text-xs text-gray-400 mb-2">{profile.job_title || profile.business_name}</p>
-            <p className="text-xs text-gray-500 mb-3">{profile.industry}</p>
-            <span className="inline-block px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">
-              Trial - {trialDaysLeft} days left
-            </span>
+      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/50 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full"></div>
+            <span className="text-sm font-medium tracking-widest uppercase text-white">LeadSite.AI</span>
           </div>
 
-          <nav className="flex-1 space-y-2">
-            <button
-              onClick={() => setActiveSection("dashboard")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm ${
-                activeSection === "dashboard"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-600/20 text-white border-l-4 border-cyan-400"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveSection("targeting")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm ${
-                activeSection === "targeting"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-600/20 text-white border-l-4 border-cyan-400"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Target className="w-4 h-4" />
-              Targeting
-            </button>
-            <button
-              onClick={() => setActiveSection("contact")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm ${
-                activeSection === "contact"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-600/20 text-white border-l-4 border-cyan-400"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Mail className="w-4 h-4" />
-              Contact
-            </button>
-            <button
-              onClick={() => setActiveSection("settings")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm ${
-                activeSection === "settings"
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-600/20 text-white border-l-4 border-cyan-400"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
-          </nav>
+          {trialDaysLeft > 0 && (
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium tracking-wide">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              </span>
+              TRIAL: {trialDaysLeft} DAYS LEFT
+            </div>
+          )}
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm mt-4"
+            className="flex items-center gap-2 text-xs font-medium bg-white/10 hover:bg-white/20 border border-white/10 px-4 py-2 rounded-full transition-all text-white"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            <span className="hidden md:inline">Logout</span>
           </button>
-        </aside>
+        </div>
+      </nav>
 
-        <main className="flex-1 p-8 overflow-y-auto">
-          {activeSection === "dashboard" && (
-            <div className="max-w-7xl mx-auto space-y-8">
-              {actionStatus && (
-                <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500/30 rounded-lg p-4 backdrop-blur-sm">
-                  <p className="text-sm text-white">{actionStatus}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-cyan-400/50 transition-all">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Target className="w-5 h-5 text-cyan-400" />
-                    <span className="text-xs uppercase text-gray-400 tracking-wider">Total Prospects</span>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">{stats.prospects}</div>
-                  <div className="text-xs text-gray-400">+{Math.floor(stats.prospects * 0.25)} this week</div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-purple-400/50 transition-all">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Mail className="w-5 h-5 text-purple-400" />
-                    <span className="text-xs uppercase text-gray-400 tracking-wider">Emails Sent</span>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">{stats.emailsSent}</div>
-                  <div className="text-xs text-gray-400">+8 today</div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-green-400/50 transition-all">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Eye className="w-5 h-5 text-green-400" />
-                    <span className="text-xs uppercase text-gray-400 tracking-wider">Open Rate</span>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">{stats.openRate}%</div>
-                  <div className="text-xs text-green-400">↑ 5% from avg</div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-cyan-400/50 transition-all">
-                  <div className="flex items-center gap-3 mb-2">
-                    <MessageSquare className="w-5 h-5 text-cyan-400" />
-                    <span className="text-xs uppercase text-gray-400 tracking-wider">Replies</span>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">{stats.replies}</div>
-                  <div className="text-xs text-gray-400">17.8% reply rate</div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-red-400/50 transition-all">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Flame className="w-5 h-5 text-red-400" />
-                    <span className="text-xs uppercase text-gray-400 tracking-wider">Hot Leads</span>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">{stats.hotLeads}</div>
-                  <div className="text-xs text-red-400">Awaiting follow-up</div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-purple-400/50 transition-all">
-                  <div className="flex items-center gap-3 mb-2">
-                    <TrendingUp className="w-5 h-5 text-purple-400" />
-                    <span className="text-xs uppercase text-gray-400 tracking-wider">Delivery Rate</span>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">{stats.deliveryRate}%</div>
-                  <div className="text-xs text-green-400">Excellent</div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-cyan-400" />
-                  AI-Powered Actions
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-cyan-400/50 hover:-translate-y-1 transition-all text-center">
-                    <Search className="w-10 h-10 text-cyan-400 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold mb-2">Discover Prospects</h3>
-                    <p className="text-xs text-gray-400 mb-4">Find businesses matching your target profile</p>
-                    <div className="flex gap-2 justify-center mb-4">
-                      <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs">Fast</span>
-                      <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs">Targeted</span>
-                    </div>
-                    <button
-                      onClick={handleDiscoverProspects}
-                      disabled={isDiscovering}
-                      className="w-full px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg text-white text-sm font-semibold hover:scale-105 transition-transform disabled:opacity-50"
-                    >
-                      {isDiscovering ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Start Discovery"}
-                    </button>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-purple-400/50 hover:-translate-y-1 transition-all text-center">
-                    <Sparkles className="w-10 h-10 text-purple-400 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold mb-2">Generate Emails</h3>
-                    <p className="text-xs text-gray-400 mb-4">Create personalized outreach messages</p>
-                    <div className="flex gap-2 justify-center mb-4">
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">AI Powered</span>
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">Dynamic</span>
-                    </div>
-                    <button
-                      onClick={handleGenerateEmails}
-                      disabled={isGenerating}
-                      className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg text-white text-sm font-semibold hover:scale-105 transition-transform disabled:opacity-50"
-                    >
-                      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Generate Now"}
-                    </button>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-green-400/50 hover:-translate-y-1 transition-all text-center">
-                    <Send className="w-10 h-10 text-green-400 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold mb-2">Send Campaign</h3>
-                    <p className="text-xs text-gray-400 mb-4">Launch and monitor engagement real-time</p>
-                    <div className="flex gap-2 justify-center mb-4">
-                      <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">Live</span>
-                      <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">Analytics</span>
-                    </div>
-                    <button
-                      onClick={handleSendCampaign}
-                      disabled={isSending}
-                      className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white text-sm font-semibold hover:scale-105 transition-transform disabled:opacity-50"
-                    >
-                      {isSending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Send Campaign"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-red-500/10 to-white/5 backdrop-blur-md rounded-xl p-6 border-2 border-red-500/30">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Flame className="w-5 h-5 text-red-400" />
-                    Hot Leads (Active Interest)
-                  </h2>
-                  <a href="#" className="text-xs text-cyan-400 hover:text-cyan-300">
-                    View All ({hotLeads.length}) →
-                  </a>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {hotLeads.map((lead) => (
-                    <div
-                      key={lead.id}
-                      className="bg-gradient-to-br from-white/5 to-white/3 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:border-red-400/50 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-semibold">
-                          ✅ {lead.status === "hot" ? "Hot" : "Interested"}
-                        </span>
-                      </div>
-                      <h3 className="text-sm font-semibold mb-1">{lead.name}</h3>
-                      <p className="text-xs text-gray-400 mb-1">{lead.company}</p>
-                      <a href={`mailto:${lead.email}`} className="text-xs text-cyan-400 hover:text-cyan-300 mb-3 block">
-                        {lead.email}
-                      </a>
-                      <div className="bg-cyan-500/10 border-l-2 border-cyan-400 rounded p-2 mb-3">
-                        <p className="text-xs italic text-gray-300">"{lead.reply}"</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="flex-1 px-3 py-1 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded text-xs font-semibold hover:scale-105 transition-transform">
-                          Reply
-                        </button>
-                        <button className="flex-1 px-3 py-1 bg-gradient-to-r from-purple-500 to-purple-600 rounded text-xs font-semibold hover:scale-105 transition-transform">
-                          Details
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-cyan-400" />
-                  Business Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-xs uppercase text-gray-400 mb-2">Company Details</h3>
-                    <p className="text-sm mb-1">
-                      <span className="text-gray-400">Name:</span> {profile.business_name}
-                    </p>
-                    <p className="text-sm mb-1">
-                      <span className="text-gray-400">Industry:</span> {profile.industry}
-                    </p>
-                    <p className="text-sm mb-1">
-                      <span className="text-gray-400">Website:</span>{" "}
-                      <a
-                        href={profile.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-400 hover:text-cyan-300"
-                      >
-                        {profile.website}
-                      </a>
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-xs uppercase text-gray-400 mb-2">Contact Information</h3>
-                    <p className="text-sm mb-1">
-                      <span className="text-gray-400">Email:</span> {profile.email}
-                    </p>
-                    <p className="text-sm mb-1">
-                      <span className="text-gray-400">Phone:</span> {profile.phone}
-                    </p>
-                    <p className="text-sm mb-1">
-                      <span className="text-gray-400">Address:</span> {profile.street}, {profile.city}, {profile.state}{" "}
-                      {profile.zip}
-                    </p>
-                  </div>
-
-                  {(profile.linkedin || profile.twitter || profile.github) && (
-                    <div className="col-span-2">
-                      <h3 className="text-xs uppercase text-gray-400 mb-2">Social Media</h3>
-                      <div className="flex gap-4">
-                        {profile.linkedin && (
-                          <a
-                            href={profile.linkedin}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-400 hover:text-cyan-300 text-sm"
-                          >
-                            LinkedIn →
-                          </a>
-                        )}
-                        {profile.twitter && (
-                          <a
-                            href={profile.twitter}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-400 hover:text-cyan-300 text-sm"
-                          >
-                            Twitter →
-                          </a>
-                        )}
-                        {profile.github && (
-                          <a
-                            href={profile.github}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-400 hover:text-cyan-300 text-sm"
-                          >
-                            GitHub →
-                          </a>
-                        )}
-                      </div>
+      <div className="relative z-10 pt-24 pb-12 px-6 max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="lg:w-80">
+            <div className="sticky top-24 space-y-6">
+              <div className="p-6 rounded-2xl bg-neutral-900/30 border border-white/10">
+                <div className="flex flex-col items-center text-center mb-6">
+                  {profile?.logo_base64 ? (
+                    <img
+                      src={profile.logo_base64 || "/placeholder.svg"}
+                      alt="Business Logo"
+                      className="w-20 h-20 rounded-full object-cover mb-4 border-2 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-2xl font-medium mb-4 border-2 border-white/10">
+                      {profile?.name?.charAt(0) || "U"}
                     </div>
                   )}
+                  <h2 className="text-lg font-medium text-white">{profile?.name}</h2>
+                  <p className="text-xs text-neutral-400 font-light">{profile?.job_title}</p>
+                  <p className="text-xs text-neutral-500 mt-2 font-light">{profile?.business_name}</p>
+                </div>
 
-                  {profile.services && (
-                    <div className="col-span-2">
-                      <h3 className="text-xs uppercase text-gray-400 mb-2">Services Offered</h3>
-                      <p className="text-sm">{profile.services}</p>
-                    </div>
-                  )}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setActiveSection("dashboard")}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      activeSection === "dashboard"
+                        ? "bg-white/10 text-white border border-indigo-500/50"
+                        : "text-neutral-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </button>
+
+                  <button
+                    onClick={() => setActiveSection("targeting")}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      activeSection === "targeting"
+                        ? "bg-white/10 text-white border border-indigo-500/50"
+                        : "text-neutral-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Target className="w-4 h-4" />
+                    Targeting
+                  </button>
+
+                  <button
+                    onClick={() => setActiveSection("contact")}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      activeSection === "contact"
+                        ? "bg-white/10 text-white border border-indigo-500/50"
+                        : "text-neutral-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Mail className="w-4 h-4" />
+                    Contact
+                  </button>
+
+                  <button
+                    onClick={() => setActiveSection("settings")}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      activeSection === "settings"
+                        ? "bg-white/10 text-white border border-indigo-500/50"
+                        : "text-neutral-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </button>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {prospects.length > 0 && (
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
-                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-purple-400" />
-                    Discovered Prospects ({prospects.length})
+          <div className="flex-1 space-y-8">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-medium tracking-tight mb-2">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-neutral-500">
+                  Welcome back, {profile?.name?.split(" ")[0]}
+                </span>
+              </h1>
+              <p className="text-sm text-neutral-400 font-light">Your AI-powered lead generation dashboard</p>
+            </div>
+
+            {actionStatus && (
+              <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-sm font-medium animate-fade-in-up">
+                {actionStatus}
+              </div>
+            )}
+
+            {activeSection === "dashboard" && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400">
+                          <Target className="w-5 h-5" />
+                        </div>
+                        <span className="text-2xl font-medium text-white">{stats.prospects}</span>
+                      </div>
+                      <p className="text-xs text-neutral-400 font-light">Prospects Discovered</p>
+                    </div>
+                  </div>
+
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-purple-400">
+                          <Mail className="w-5 h-5" />
+                        </div>
+                        <span className="text-2xl font-medium text-white">{stats.emailsSent}</span>
+                      </div>
+                      <p className="text-xs text-neutral-400 font-light">Emails Sent</p>
+                    </div>
+                  </div>
+
+                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-cyan-400">
+                          <Zap className="w-5 h-5" />
+                        </div>
+                        <span className="text-2xl font-medium text-white">{stats.hotLeads}</span>
+                      </div>
+                      <p className="text-xs text-neutral-400 font-light">Hot Leads</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-medium tracking-tight mb-6">
+                    <span className="text-indigo-400">AI-Powered</span> Actions
                   </h2>
-                  <div className="space-y-3">
-                    {prospects.slice(0, 5).map((prospect) => (
-                      <div
-                        key={prospect.id}
-                        className="bg-gradient-to-r from-white/5 to-white/3 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:border-purple-400/50 transition-all"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-sm font-semibold">{prospect.company_name}</h3>
-                            <p className="text-xs text-gray-400">
-                              {prospect.contact_name} • {prospect.contact_email}
-                            </p>
-                            <div className="flex gap-2 mt-2">
-                              <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs">
-                                {prospect.industry}
-                              </span>
-                              <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs capitalize">
-                                {prospect.status}
-                              </span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="relative z-10">
+                        <div className="w-12 h-12 rounded-lg bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center mb-4 text-indigo-400">
+                          <Search className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-base font-medium text-white mb-2">Discover Prospects</h3>
+                        <p className="text-xs text-neutral-400 leading-relaxed font-light mb-4">
+                          Find businesses matching your target customer profile using AI-powered search.
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            Google Maps
+                          </span>
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            Apollo.io
+                          </span>
+                        </div>
+                        <button
+                          onClick={handleDiscoverProspects}
+                          disabled={isDiscovering}
+                          className="relative inline-flex w-full h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000000_0%,#6366f1_50%,#000000_100%)]"></span>
+                          <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-4 py-1 text-xs font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
+                            {isDiscovering ? "Discovering..." : "Start Discovery"}
+                            <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-500">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="relative z-10">
+                        <div className="w-12 h-12 rounded-lg bg-purple-500/20 border border-purple-500/50 flex items-center justify-center mb-4 text-purple-400">
+                          <BrainCircuit className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-base font-medium text-white mb-2">Generate Emails</h3>
+                        <p className="text-xs text-neutral-400 leading-relaxed font-light mb-4">
+                          Create personalized outreach emails using GPT-4 based on your business profile.
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            GPT-4
+                          </span>
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            Personalized
+                          </span>
+                        </div>
+                        <button
+                          onClick={handleGenerateEmails}
+                          disabled={isGenerating}
+                          className="relative inline-flex w-full h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000000_0%,#9333ea_50%,#000000_100%)]"></span>
+                          <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-4 py-1 text-xs font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
+                            {isGenerating ? "Generating..." : "Generate Emails"}
+                            <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500">
+                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="relative z-10">
+                        <div className="w-12 h-12 rounded-lg bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center mb-4 text-cyan-400">
+                          <Send className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-base font-medium text-white mb-2">Send Campaign</h3>
+                        <p className="text-xs text-neutral-400 leading-relaxed font-light mb-4">
+                          Launch your email campaign and track opens, clicks, and replies in real-time.
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            SendGrid
+                          </span>
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            Tracking
+                          </span>
+                        </div>
+                        <button
+                          onClick={handleSendCampaign}
+                          disabled={isSending}
+                          className="relative inline-flex w-full h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000000_0%,#06b6d4_50%,#000000_100%)]"></span>
+                          <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-4 py-1 text-xs font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
+                            {isSending ? "Sending..." : "Launch Campaign"}
+                            <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {hotLeads.length > 0 && (
+                  <div>
+                    <h2 className="text-xl font-medium tracking-tight mb-6">
+                      <span className="text-cyan-400">Hot</span> Leads
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {hotLeads.slice(0, 3).map((lead) => (
+                        <div
+                          key={lead.id}
+                          className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-300"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h4 className="text-sm font-medium text-white">{lead.name}</h4>
+                              <p className="text-xs text-neutral-400 font-light">{lead.company}</p>
                             </div>
+                            {lead.status === "hot" && <span className="text-base">🔥</span>}
+                            {lead.status === "interested" && <span className="text-base">👍</span>}
                           </div>
-                          <button className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg text-xs font-semibold hover:scale-105 transition-transform">
-                            View Details
-                          </button>
+                          <p className="text-xs text-neutral-300 mb-3 line-clamp-2 font-light">"{lead.reply}"</p>
+                          <a
+                            href={`mailto:${lead.email}`}
+                            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                          >
+                            Reply →
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h2 className="text-xl font-medium tracking-tight mb-6">
+                    <span className="text-white">Business</span> Information
+                  </h2>
+
+                  <div className="p-8 rounded-2xl bg-neutral-900/30 border border-white/10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <h3 className="text-sm font-medium text-indigo-400 mb-4 uppercase tracking-wide">
+                          Company Details
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Business Name</p>
+                            <p className="text-sm text-white font-light">{profile?.business_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Industry</p>
+                            <p className="text-sm text-white font-light">{profile?.industry}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Website</p>
+                            <a
+                              href={profile?.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-light flex items-center gap-1"
+                            >
+                              {profile?.website}
+                              <ChevronRight className="w-3 h-3" />
+                            </a>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  {prospects.length > 5 && (
-                    <button
-                      onClick={() => setShowProspects(true)}
-                      className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg text-sm font-semibold hover:scale-105 transition-transform"
-                    >
-                      View All {prospects.length} Prospects →
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
 
-          {activeSection === "targeting" && (
-            <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-8 border border-white/10 text-center">
-              <Target className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Targeting Settings</h2>
-              <p className="text-gray-400">Configure your target audience and parameters</p>
-            </div>
-          )}
-
-          {activeSection === "contact" && (
-            <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-8 border border-white/10 text-center">
-              <Mail className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Contact Management</h2>
-              <p className="text-gray-400">Manage your contacts and communication</p>
-            </div>
-          )}
-
-          {activeSection === "settings" && (
-            <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl p-8 border border-white/10 text-center">
-              <Settings className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Settings</h2>
-              <p className="text-gray-400">Configure your account and preferences</p>
-
-              {/* Section: Schedule Settings */}
-              <section className="mb-16 mt-8 text-left">
-                <h2 className="text-xl font-light mb-6 border-b border-gray-800 pb-2">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-                    Schedule
-                  </span>{" "}
-                  Settings
-                </h2>
-
-                <div className="backdrop-blur-lg bg-black/30 rounded-xl border border-gray-800 p-6">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-base font-normal text-white mb-1">Automatic Prospect Discovery</h3>
-                        <p className="text-xs text-gray-400">Run prospect discovery automatically every night</p>
+                        <h3 className="text-sm font-medium text-purple-400 mb-4 uppercase tracking-wide">Address</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Street</p>
+                            <p className="text-sm text-white font-light">{profile?.street}</p>
+                          </div>
+                          <div className="flex gap-4">
+                            <div className="flex-1">
+                              <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">City</p>
+                              <p className="text-sm text-white font-light">{profile?.city}</p>
+                            </div>
+                            <div className="w-20">
+                              <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">State</p>
+                              <p className="text-sm text-white font-light">{profile?.state}</p>
+                            </div>
+                            <div className="w-24">
+                              <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Zip</p>
+                              <p className="text-sm text-white font-light">{profile?.zip}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <button
-                        onClick={() =>
-                          setSchedule((prev) => ({ ...prev, auto_discover_enabled: !prev.auto_discover_enabled }))
-                        }
-                        className={`relative w-12 h-6 rounded-full transition-colors ${
-                          schedule.auto_discover_enabled ? "bg-blue-500" : "bg-gray-600"
-                        }`}
-                      >
-                        <div
-                          className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            schedule.auto_discover_enabled ? "translate-x-6" : ""
-                          }`}
-                        />
-                      </button>
+
+                      <div>
+                        <h3 className="text-sm font-medium text-cyan-400 mb-4 uppercase tracking-wide">Contact</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Email</p>
+                            <a
+                              href={`mailto:${profile?.email}`}
+                              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-light"
+                            >
+                              {profile?.email}
+                            </a>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Phone</p>
+                            <a
+                              href={`tel:${profile?.phone}`}
+                              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-light"
+                            >
+                              {profile?.phone}
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-medium text-white mb-4 uppercase tracking-wide">Social Media</h3>
+                        <div className="space-y-3">
+                          {profile?.linkedin && (
+                            <div>
+                              <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">LinkedIn</p>
+                              <a
+                                href={profile.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-light flex items-center gap-1"
+                              >
+                                {profile.linkedin}
+                                <ChevronRight className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                          {profile?.twitter && (
+                            <div>
+                              <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">Twitter</p>
+                              <a
+                                href={profile.twitter}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-light flex items-center gap-1"
+                              >
+                                {profile.twitter}
+                                <ChevronRight className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                          {profile?.github && (
+                            <div>
+                              <p className="text-[10px] text-neutral-500 mb-1 uppercase tracking-wider">GitHub</p>
+                              <a
+                                href={profile.github}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-light flex items-center gap-1"
+                              >
+                                {profile.github}
+                                <ChevronRight className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                  </div>
+                </div>
 
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">
-                        Daily Prospect Limit
-                      </label>
-                      <select
-                        value={schedule.daily_prospect_limit}
-                        onChange={(e) =>
-                          setSchedule((prev) => ({ ...prev, daily_prospect_limit: Number.parseInt(e.target.value) }))
-                        }
-                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                      >
-                        <option value={25}>25 prospects/day</option>
-                        <option value={50}>50 prospects/day</option>
-                        <option value={100}>100 prospects/day</option>
-                        <option value={200}>200 prospects/day</option>
-                      </select>
+                <div>
+                  <h2 className="text-xl font-medium tracking-tight mb-6">
+                    <span className="text-purple-400">Target</span> Audience
+                  </h2>
+
+                  {prospects.length > 0 ? (
+                    <div className="p-6 rounded-2xl bg-neutral-900/30 border border-white/10 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="text-left border-b border-white/5">
+                              <th className="pb-3 text-xs text-neutral-500 font-medium uppercase tracking-wider">
+                                Company
+                              </th>
+                              <th className="pb-3 text-xs text-neutral-500 font-medium uppercase tracking-wider">
+                                Contact
+                              </th>
+                              <th className="pb-3 text-xs text-neutral-500 font-medium uppercase tracking-wider">
+                                Email
+                              </th>
+                              <th className="pb-3 text-xs text-neutral-500 font-medium uppercase tracking-wider">
+                                Status
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {prospects.slice(0, 5).map((prospect, index) => (
+                              <tr key={prospect.id || index} className="hover:bg-white/5 transition-colors">
+                                <td className="py-3 text-sm text-white font-light">{prospect.company_name}</td>
+                                <td className="py-3 text-sm text-neutral-300 font-light">{prospect.contact_name}</td>
+                                <td className="py-3 text-sm text-indigo-400 font-light">{prospect.email}</td>
+                                <td className="py-3">
+                                  <span
+                                    className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                      prospect.status === "qualified"
+                                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                                        : prospect.status === "contacted"
+                                          ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                          : "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
+                                    }`}
+                                  >
+                                    {prospect.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {prospects.length > 5 && (
+                        <div className="mt-6 text-center">
+                          <button className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+                            View All {prospects.length} Prospects →
+                          </button>
+                        </div>
+                      )}
                     </div>
-
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">Run Time</label>
-                      <input
-                        type="time"
-                        value={schedule.run_time}
-                        onChange={(e) => setSchedule((prev) => ({ ...prev, run_time: e.target.value }))}
-                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleSaveSchedule}
-                      disabled={savingSchedule}
-                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all disabled:opacity-50 text-sm"
-                    >
-                      {savingSchedule ? "Saving..." : "Save Schedule Settings"}
-                    </button>
-
-                    <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                      <p className="text-xs text-blue-400">
-                        <strong>How it works:</strong> When enabled, the system will automatically discover new
-                        prospects every night at your specified time. Prospects will be added to your account up to the
-                        daily limit.
+                  ) : (
+                    <div className="p-12 rounded-2xl bg-neutral-900/30 border border-white/10 text-center">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-500">
+                        <Target className="w-8 h-8" />
+                      </div>
+                      <p className="text-sm text-neutral-400 font-light">No prospects discovered yet</p>
+                      <p className="text-xs text-neutral-500 mt-2 font-light">
+                        Click "Discover Prospects" to find potential leads
                       </p>
                     </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {activeSection === "targeting" && (
+              <div className="p-8 rounded-2xl bg-neutral-900/30 border border-white/10">
+                <h2 className="text-xl font-medium tracking-tight mb-6">Targeting Settings</h2>
+                <p className="text-sm text-neutral-400 font-light">Configure your target audience parameters here.</p>
+              </div>
+            )}
+
+            {activeSection === "contact" && (
+              <div className="p-8 rounded-2xl bg-neutral-900/30 border border-white/10">
+                <h2 className="text-xl font-medium tracking-tight mb-6">Contact Information</h2>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-neutral-500 mb-2 uppercase tracking-wider">Email</p>
+                    <p className="text-sm text-white font-light">{profile?.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-500 mb-2 uppercase tracking-wider">Phone</p>
+                    <p className="text-sm text-white font-light">{profile?.phone}</p>
                   </div>
                 </div>
-              </section>
-            </div>
-          )}
-        </main>
+              </div>
+            )}
+
+            {activeSection === "settings" && (
+              <div className="p-8 rounded-2xl bg-neutral-900/30 border border-white/10">
+                <h2 className="text-xl font-medium tracking-tight mb-6">Settings</h2>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="text-sm font-medium text-white">Auto-Discovery</p>
+                        <p className="text-xs text-neutral-400 font-light mt-1">
+                          Automatically discover new prospects daily
+                        </p>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={schedule.auto_discover_enabled}
+                          onChange={(e) => setSchedule({ ...schedule, auto_discover_enabled: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-neutral-400 font-medium mb-2 uppercase tracking-wider">
+                      Daily Prospect Limit
+                    </label>
+                    <select
+                      value={schedule.daily_prospect_limit}
+                      onChange={(e) =>
+                        setSchedule({ ...schedule, daily_prospect_limit: Number.parseInt(e.target.value) })
+                      }
+                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all text-sm"
+                    >
+                      <option value="25">25 prospects</option>
+                      <option value="50">50 prospects</option>
+                      <option value="100">100 prospects</option>
+                      <option value="200">200 prospects</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleSaveSchedule}
+                    disabled={savingSchedule}
+                    className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000000_0%,#6366f1_50%,#000000_100%)]"></span>
+                    <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-8 py-1 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 hover:bg-neutral-900/80 transition-colors">
+                      {savingSchedule ? "Saving..." : "Save Settings"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Create Business Modal */}
