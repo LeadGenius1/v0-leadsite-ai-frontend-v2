@@ -195,7 +195,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           {typeof user?.trial_days_left === "number" && user.trial_days_left > 0 && (
             <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-lg flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🎉</span>
+                <Sparkles className="w-5 h-5 text-purple-300" />
                 <p className="text-sm font-medium">
                   {user.trial_days_left} {user.trial_days_left === 1 ? "day" : "days"} left in your free trial
                 </p>
