@@ -169,7 +169,6 @@ export default function OnboardingPage() {
       const token = localStorage.getItem("token")
 
       if (!token) {
-        console.error("[v0] No token found, redirecting to login")
         router.push("/login")
         return
       }
@@ -192,8 +191,6 @@ export default function OnboardingPage() {
         include_pricing: formData.include_pricing,
       }
 
-      console.log("[v0] Submitting comprehensive onboarding payload:", JSON.stringify(payload, null, 2))
-
       const response = await fetch("https://api.leadsite.ai/api/profile", {
         method: "POST",
         headers: {
@@ -208,27 +205,20 @@ export default function OnboardingPage() {
         let errorMessage = `Failed to save profile (${response.status})`
         try {
           const errorData = await response.json()
-          console.error("[v0] Error response:", errorData)
           errorMessage = errorData.error || errorData.message || errorMessage
         } catch (e) {
           const errorText = await response.text()
-          console.error("[v0] Error text:", errorText)
           if (errorText) errorMessage = errorText
         }
         throw new Error(errorMessage)
       }
 
-      const responseData = await response.json()
-      console.log("[v0] Success response:", responseData)
-      console.log("[v0] Profile saved successfully!")
+      await response.json()
 
       await new Promise((resolve) => setTimeout(resolve, 3000))
 
-      console.log("[v0] Redirecting to dashboard...")
       window.location.href = "/dashboard"
     } catch (err) {
-      console.error("[v0] Onboarding submission error:", err)
-
       let userMessage = "Failed to save profile"
       if (err instanceof Error) {
         if (err.message.includes("401") || err.message.includes("Unauthorized")) {

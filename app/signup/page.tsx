@@ -20,11 +20,7 @@ export default function SignupPage() {
     setError("")
     setIsLoading(true)
 
-    console.log("[v0] Signup form submitted", { email, companyName })
-
     try {
-      console.log("[v0] Calling local signup API:", "https://api.leadsite.ai/api/auth/signup")
-
       const response = await fetch("https://api.leadsite.ai/api/auth/signup", {
         method: "POST",
         headers: {
@@ -38,10 +34,7 @@ export default function SignupPage() {
         }),
       })
 
-      console.log("[v0] Signup API response status:", response.status)
-
       const data = await response.json()
-      console.log("[v0] Signup API response data:", data)
 
       if (!response.ok) {
         if (response.status === 409) {
@@ -51,29 +44,22 @@ export default function SignupPage() {
       }
 
       if (!data.token) {
-        console.error("[v0] No token in signup response!", data)
         throw new Error("Server did not return authentication token")
       }
 
-      console.log("[v0] Storing auth token...")
       localStorage.setItem("token", data.token)
 
       if (data.user?.id) {
         localStorage.setItem("userId", data.user.id.toString())
-        console.log("[v0] User ID stored:", data.user.id)
       }
 
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      console.log("[v0] Token verification:", localStorage.getItem("token") ? "SUCCESS" : "FAILED")
-
       setSuccess(true)
 
-      console.log("[v0] Redirecting to /onboarding with hard reload")
       await new Promise((resolve) => setTimeout(resolve, 500))
       window.location.href = "/onboarding"
     } catch (err) {
-      console.error("[v0] Signup error:", err)
       if (err instanceof TypeError && err.message.includes("fetch")) {
         setError(`Network error: ${err.message}`)
       } else {

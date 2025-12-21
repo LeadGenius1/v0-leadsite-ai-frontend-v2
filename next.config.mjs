@@ -6,6 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  turbopack: {},
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
       config.infrastructureLogging = {

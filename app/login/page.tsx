@@ -18,11 +18,8 @@ export default function LoginPage() {
     setError("")
     setIsLoading(true)
 
-    console.log("[LOGIN] Attempt started")
-    console.log("[LOGIN] Email:", email)
-
     try {
-      const response = await fetch("https://api.leadsite.ai/api/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -30,8 +27,6 @@ export default function LoginPage() {
         credentials: "include",
         body: JSON.stringify({ email, password }),
       })
-
-      console.log("[LOGIN] Response status:", response.status)
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -42,57 +37,42 @@ export default function LoginPage() {
       }
 
       const data = await response.json()
-      console.log("[LOGIN] Response data:", { hasToken: !!data.token, hasUser: !!data.user })
 
       if (data.token) {
         localStorage.setItem("sessionToken", data.token)
-        localStorage.setItem("token", data.token) // Store both for compatibility
-        console.log("[LOGIN] Token stored:", localStorage.getItem("sessionToken"))
+        localStorage.setItem("token", data.token)
       } else {
         throw new Error("No token received from server")
       }
-
-      localStorage.setItem("token", data.token)
 
       if (data.user?.id) {
         localStorage.setItem("userId", data.user.id.toString())
       }
 
       await new Promise((resolve) => setTimeout(resolve, 100))
-      console.log("[LOGIN] Token verified in storage:", localStorage.getItem("sessionToken"))
 
-      console.log("[LOGIN] Checking for user profile...")
       try {
-        const profileResponse = await fetch("https://api.leadsite.ai/api/profile", {
+        const profileResponse = await fetch(`${API_BASE_URL}/api/profile`, {
           headers: {
             Authorization: `Bearer ${data.token}`,
           },
           credentials: "include",
         })
 
-        console.log("[LOGIN] Profile check status:", profileResponse.status)
-
         if (!profileResponse.ok && profileResponse.status === 404) {
-          console.log("[LOGIN] No profile found, redirecting to onboarding")
           window.location.href = "/onboarding"
         } else {
           const profileData = await profileResponse.json()
-          // Check if onboarding is complete (website_url should be filled)
           if (!profileData.website_url || profileData.website_url === "") {
-            console.log("[LOGIN] Profile incomplete, redirecting to onboarding")
             window.location.href = "/onboarding"
           } else {
-            console.log("[LOGIN] Profile exists, redirecting to dashboard")
             window.location.href = "/dashboard"
           }
         }
       } catch (profileError) {
-        console.log("[LOGIN] Profile check failed, assuming new user:", profileError)
         window.location.href = "/onboarding"
       }
     } catch (err) {
-      console.error("[v0] Login error:", err)
-
       if (err instanceof TypeError && err.message === "Failed to fetch") {
         setError("Cannot connect to the server. Please try again later.")
       } else {
@@ -100,7 +80,6 @@ export default function LoginPage() {
       }
     } finally {
       setIsLoading(false)
-      console.log("[LOGIN] Login attempt completed")
     }
   }
 
