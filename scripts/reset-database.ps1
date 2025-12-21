@@ -51,7 +51,7 @@ try {
         Write-Host "✅ Found psql, executing SQL..." -ForegroundColor Green
         psql $DATABASE_URL -f $tempSqlFile
         Write-Host ""
-        Write-Host "✨ Database reset completed successfully!" -ForegroundColor Green
+        Write-Host "Database reset completed successfully!" -ForegroundColor Green
         Write-Host "All users and related data have been deleted." -ForegroundColor Green
     }
     else {

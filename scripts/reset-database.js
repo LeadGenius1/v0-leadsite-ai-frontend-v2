@@ -53,7 +53,7 @@ async function resetDatabase() {
     // Commit transaction
     await client.query("COMMIT")
 
-    console.log("\n✨ Database reset completed successfully!")
+    console.log("\nDatabase reset completed successfully!")
     console.log("All users and related data have been deleted.\n")
   } catch (error) {
     // Rollback on error
