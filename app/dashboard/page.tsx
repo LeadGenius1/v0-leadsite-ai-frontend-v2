@@ -258,21 +258,44 @@ export default function DashboardPage() {
 
   const fetchDashboard = async () => {
     try {
-      const data = await apiCall("/api/dashboard")
+      const data = await apiCall("/api/auth/me")
 
-      if (data.profile) {
-        setProfile(data.profile)
+      if (data.user) {
+        const mappedProfile: ProfileData = {
+          id: data.user.id,
+          customer_id: data.user.customer_id,
+          name: data.user.name || "",
+          job_title: data.user.job_title || "",
+          business_name: data.user.company_name || "",
+          industry: data.user.profile?.industry || "",
+          website: data.user.profile?.website_url || "",
+          street: "",
+          city: "",
+          state: "",
+          zip: "",
+          email: data.user.email,
+          phone: "",
+          trial_end_date: data.user.trial_end_date,
+          analysis_status: data.user.profile?.analysis_status,
+          company_size: data.user.profile?.company_size,
+          year_founded: data.user.profile?.year_founded,
+          target_industries: data.user.profile?.target_industries,
+          target_company_sizes: data.user.profile?.target_company_sizes,
+          target_job_titles: data.user.profile?.target_job_titles,
+          target_locations: data.user.profile?.target_locations,
+          unique_selling_points: data.user.profile?.unique_selling_points,
+          email_tone: data.user.profile?.email_tone,
+          email_style: data.user.profile?.email_length,
+          email_preferences: data.user.profile?.email_preferences,
+        }
+        setProfile(mappedProfile)
 
-        if (data.profile.trial_end_date) {
-          const endDate = new Date(data.profile.trial_end_date)
+        if (data.user.trial_end_date) {
+          const endDate = new Date(data.user.trial_end_date)
           const today = new Date()
           const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
           setTrialDaysLeft(Math.max(0, daysLeft))
         }
-      }
-
-      if (data.hotLeads) {
-        setHotLeads(data.hotLeads)
       }
 
       setLoading(false)
