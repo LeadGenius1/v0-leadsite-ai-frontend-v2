@@ -74,6 +74,24 @@ interface ProfileData {
   github?: string
   trial_end_date?: string
   analysis_status?: string // Added for analysis status
+
+  // Onboarding data fields for AI agent
+  company_size?: string
+  year_founded?: string
+  target_customer_type?: string
+  target_industries?: string
+  target_company_sizes?: string
+  target_job_titles?: string
+  target_locations?: string
+  services?: string
+  unique_selling_points?: string
+  customer_pain_points?: string
+  email_tone?: string
+  email_style?: string
+  email_preferences?: {
+    include_case_studies: boolean
+    include_pricing: boolean
+  }
 }
 
 interface QuickStats {
@@ -1208,75 +1226,204 @@ export default function DashboardPage() {
                   <span className="text-purple-400">Business</span> Information
                 </h2>
 
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="text-xs text-gray-400 uppercase mb-1">Business Name</h4>
-                      <p className="text-sm">{profile.business_name}</p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs text-gray-400 uppercase mb-1">Industry</h4>
-                      <p className="text-sm">{profile.industry}</p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs text-gray-400 uppercase mb-1">Website</h4>
-                      <a
-                        href={profile.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-cyan-400 hover:underline"
-                      >
-                        {profile.website}
-                      </a>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs text-gray-400 uppercase mb-1">Address</h4>
-                      <p className="text-sm">
-                        {profile.street}, {profile.city}, {profile.state} {profile.zip}
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs text-gray-400 uppercase mb-1">Email</h4>
-                      <p className="text-sm">{profile.email}</p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs text-gray-400 uppercase mb-1">Phone</h4>
-                      <p className="text-sm">{profile.phone}</p>
-                    </div>
-
-                    {profile.linkedin && (
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 space-y-6">
+                  {/* Company Details */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-purple-400 mb-3">Company Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-xs text-gray-400 uppercase mb-1">LinkedIn</h4>
+                        <h4 className="text-xs text-gray-400 uppercase mb-1">Business Name</h4>
+                        <p className="text-sm">{profile.business_name}</p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-xs text-gray-400 uppercase mb-1">Industry</h4>
+                        <p className="text-sm">{profile.industry}</p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-xs text-gray-400 uppercase mb-1">Website</h4>
                         <a
-                          href={profile.linkedin}
+                          href={profile.website}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-cyan-400 hover:underline"
                         >
-                          View Profile
+                          {profile.website}
                         </a>
                       </div>
-                    )}
 
-                    {profile.twitter && (
-                      <div>
-                        <h4 className="text-xs text-gray-400 uppercase mb-1">Twitter</h4>
-                        <a
-                          href={profile.twitter}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-cyan-400 hover:underline"
-                        >
-                          View Profile
-                        </a>
-                      </div>
-                    )}
+                      {profile.company_size && (
+                        <div>
+                          <h4 className="text-xs text-gray-400 uppercase mb-1">Company Size</h4>
+                          <p className="text-sm">{profile.company_size}</p>
+                        </div>
+                      )}
+
+                      {profile.year_founded && (
+                        <div>
+                          <h4 className="text-xs text-gray-400 uppercase mb-1">Year Founded</h4>
+                          <p className="text-sm">{profile.year_founded}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Contact Information */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-cyan-400 mb-3">Contact Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {profile.street && (
+                        <div>
+                          <h4 className="text-xs text-gray-400 uppercase mb-1">Address</h4>
+                          <p className="text-sm">
+                            {profile.street}, {profile.city}, {profile.state} {profile.zip}
+                          </p>
+                        </div>
+                      )}
+
+                      <div>
+                        <h4 className="text-xs text-gray-400 uppercase mb-1">Email</h4>
+                        <p className="text-sm">{profile.email}</p>
+                      </div>
+
+                      {profile.phone && (
+                        <div>
+                          <h4 className="text-xs text-gray-400 uppercase mb-1">Phone</h4>
+                          <p className="text-sm">{profile.phone}</p>
+                        </div>
+                      )}
+
+                      {profile.linkedin && (
+                        <div>
+                          <h4 className="text-xs text-gray-400 uppercase mb-1">LinkedIn</h4>
+                          <a
+                            href={profile.linkedin}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-cyan-400 hover:underline"
+                          >
+                            View Profile
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Target Customer Profile */}
+                  {(profile.target_customer_type ||
+                    profile.target_industries ||
+                    profile.target_job_titles ||
+                    profile.target_locations) && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-indigo-400 mb-3">Target Customer Profile</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {profile.target_customer_type && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Customer Type</h4>
+                            <p className="text-sm">{profile.target_customer_type}</p>
+                          </div>
+                        )}
+
+                        {profile.target_industries && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Industries</h4>
+                            <p className="text-sm">{profile.target_industries}</p>
+                          </div>
+                        )}
+
+                        {profile.target_company_sizes && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Company Sizes</h4>
+                            <p className="text-sm">{profile.target_company_sizes}</p>
+                          </div>
+                        )}
+
+                        {profile.target_job_titles && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Job Titles</h4>
+                            <p className="text-sm">{profile.target_job_titles}</p>
+                          </div>
+                        )}
+
+                        {profile.target_locations && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Locations</h4>
+                            <p className="text-sm">{profile.target_locations}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Value Proposition */}
+                  {(profile.services || profile.unique_selling_points || profile.customer_pain_points) && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-purple-400 mb-3">Value Proposition</h3>
+                      <div className="space-y-3">
+                        {profile.services && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Services Offered</h4>
+                            <p className="text-sm">{profile.services}</p>
+                          </div>
+                        )}
+
+                        {profile.unique_selling_points && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Unique Selling Points</h4>
+                            <p className="text-sm">{profile.unique_selling_points}</p>
+                          </div>
+                        )}
+
+                        {profile.customer_pain_points && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Customer Pain Points We Solve</h4>
+                            <p className="text-sm">{profile.customer_pain_points}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Email Preferences */}
+                  {(profile.email_tone || profile.email_style || profile.email_preferences) && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-cyan-400 mb-3">Email Outreach Preferences</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {profile.email_tone && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Email Tone</h4>
+                            <p className="text-sm capitalize">{profile.email_tone}</p>
+                          </div>
+                        )}
+
+                        {profile.email_style && (
+                          <div>
+                            <h4 className="text-xs text-gray-400 uppercase mb-1">Email Style</h4>
+                            <p className="text-sm capitalize">{profile.email_style}</p>
+                          </div>
+                        )}
+
+                        {profile.email_preferences && (
+                          <div className="md:col-span-2">
+                            <h4 className="text-xs text-gray-400 uppercase mb-2">Include in Emails</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {profile.email_preferences.include_case_studies && (
+                                <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded text-xs">
+                                  Case Studies
+                                </span>
+                              )}
+                              {profile.email_preferences.include_pricing && (
+                                <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 rounded text-xs">
+                                  Pricing Information
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

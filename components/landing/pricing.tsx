@@ -115,7 +115,9 @@ const plans = [
 export function Pricing() {
   const [showModal, setShowModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string>("")
-  const [formData, setFormData] = useState({ email: "", password: "", company: "" })
+  const [modalEmail, setModalEmail] = useState("")
+  const [modalPassword, setModalPassword] = useState("")
+  const [modalCompany, setModalCompany] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -132,9 +134,9 @@ export function Pricing() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          company_name: formData.company,
+          email: modalEmail,
+          password: modalPassword,
+          company_name: modalCompany,
         }),
       })
 
@@ -393,8 +395,8 @@ export function Pricing() {
                   required
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="you@company.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={modalEmail}
+                  onChange={(e) => setModalEmail(e.target.value)}
                 />
               </div>
 
@@ -409,8 +411,8 @@ export function Pricing() {
                   minLength={8}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Minimum 8 characters"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  value={modalPassword}
+                  onChange={(e) => setModalPassword(e.target.value)}
                 />
               </div>
 
@@ -424,8 +426,8 @@ export function Pricing() {
                   required
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Your Company Inc."
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  value={modalCompany}
+                  onChange={(e) => setModalCompany(e.target.value)}
                 />
               </div>
 

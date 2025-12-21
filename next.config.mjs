@@ -6,7 +6,14 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
- 
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      config.infrastructureLogging = {
+        level: 'error',
+      }
+    }
+    return config
+  },
 }
 
 export default nextConfig

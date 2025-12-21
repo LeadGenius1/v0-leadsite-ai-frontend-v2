@@ -167,7 +167,9 @@ export default function OnboardingPage() {
 
     try {
       const token = localStorage.getItem("token")
+
       if (!token) {
+        console.error("[v0] No token found, redirecting to login")
         router.push("/login")
         return
       }
@@ -178,46 +180,70 @@ export default function OnboardingPage() {
         website_url: url,
         business_name: formData.business_name,
         industry: formData.industry,
-        company_size: formData.company_size,
-        year_founded: formData.year_founded,
-        target_customer_type: formData.target_customer_type,
-        target_industries: formData.target_industries.join(", "),
-        target_company_sizes: formData.target_company_sizes.join(", "),
-        target_job_titles: [...formData.target_job_titles, formData.custom_job_titles].filter(Boolean).join(", "),
-        target_locations: formData.target_locations.join(", "),
-        services: formData.services_offered,
+        company_size: formData.company_size || "1-10 employees",
+        target_industries: formData.target_industries,
+        target_company_sizes: formData.target_company_sizes,
+        target_job_titles: [...formData.target_job_titles, formData.custom_job_titles].filter(Boolean),
+        target_locations: formData.target_locations,
         unique_selling_points: formData.unique_selling_points,
-        customer_pain_points: formData.customer_pain_points,
         email_tone: formData.email_tone,
-        email_style: formData.email_style,
-        email_preferences: {
-          include_case_studies: formData.include_case_studies,
-          include_pricing: formData.include_pricing,
-        },
+        email_length: formData.email_style,
+        include_case_studies: formData.include_case_studies,
+        include_pricing: formData.include_pricing,
       }
 
-      console.log("[v0] Submitting comprehensive onboarding:", payload)
+      console.log("[v0] Submitting comprehensive onboarding payload:", JSON.stringify(payload, null, 2))
 
-      const response = await fetch(`${API_BASE_URL}/api/profile`, {
+      const response = await fetch("https://api.leadsite.ai/api/profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to save profile")
+        let errorMessage = `Failed to save profile (${response.status})`
+        try {
+          const errorData = await response.json()
+          console.error("[v0] Error response:", errorData)
+          errorMessage = errorData.error || errorData.message || errorMessage
+        } catch (e) {
+          const errorText = await response.text()
+          console.error("[v0] Error text:", errorText)
+          if (errorText) errorMessage = errorText
+        }
+        throw new Error(errorMessage)
       }
 
-      // Simulate AI analysis
+      const responseData = await response.json()
+      console.log("[v0] Success response:", responseData)
+      console.log("[v0] Profile saved successfully!")
+
       await new Promise((resolve) => setTimeout(resolve, 3000))
 
+      console.log("[v0] Redirecting to dashboard...")
       window.location.href = "/dashboard"
     } catch (err) {
-      console.error("[v0] Onboarding error:", err)
-      setError(err instanceof Error ? err.message : "An error occurred")
+      console.error("[v0] Onboarding submission error:", err)
+
+      let userMessage = "Failed to save profile"
+      if (err instanceof Error) {
+        if (err.message.includes("401") || err.message.includes("Unauthorized")) {
+          userMessage = "Your session has expired. Please log in again."
+          setTimeout(() => {
+            window.location.href = "/login"
+          }, 2000)
+        } else if (err.message.includes("Network") || err.message === "Failed to fetch") {
+          userMessage = "Cannot connect to server. Please check your internet connection and try again."
+        } else {
+          userMessage = err.message
+        }
+      }
+
+      setError(userMessage)
       setIsAnalyzing(false)
     }
   }

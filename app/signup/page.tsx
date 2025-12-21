@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
-const API_BASE_URL = "https://api.leadsite.ai"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -23,13 +23,14 @@ export default function SignupPage() {
     console.log("[v0] Signup form submitted", { email, companyName })
 
     try {
-      console.log("[v0] Calling signup API:", `${API_BASE_URL}/auth/signup`)
+      console.log("[v0] Calling local signup API:", "https://api.leadsite.ai/api/auth/signup")
 
-      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      const response = await fetch("https://api.leadsite.ai/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           email,
           password,
@@ -45,11 +46,8 @@ export default function SignupPage() {
       if (!response.ok) {
         if (response.status === 409) {
           throw new Error("Email already exists. Please sign in.")
-        } else if (response.status === 500) {
-          throw new Error(data.error || "Server error occurred")
-        } else {
-          throw new Error(data.message || data.error || "Failed to create account")
         }
+        throw new Error(data.error || data.message || "Failed to create account")
       }
 
       if (!data.token) {
@@ -57,17 +55,23 @@ export default function SignupPage() {
         throw new Error("Server did not return authentication token")
       }
 
-      console.log("[v0] Storing token:", data.token.substring(0, 20) + "...")
+      console.log("[v0] Storing auth token...")
       localStorage.setItem("token", data.token)
 
-      console.log("[v0] Token stored, verifying...")
-      const storedToken = localStorage.getItem("token")
-      console.log("[v0] Token verification:", storedToken ? "SUCCESS" : "FAILED")
+      if (data.user?.id) {
+        localStorage.setItem("userId", data.user.id.toString())
+        console.log("[v0] User ID stored:", data.user.id)
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      console.log("[v0] Token verification:", localStorage.getItem("token") ? "SUCCESS" : "FAILED")
 
       setSuccess(true)
 
-      console.log("[v0] Redirecting to /onboarding")
-      router.push("/onboarding")
+      console.log("[v0] Redirecting to /onboarding with hard reload")
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      window.location.href = "/onboarding"
     } catch (err) {
       console.error("[v0] Signup error:", err)
       if (err instanceof TypeError && err.message.includes("fetch")) {
