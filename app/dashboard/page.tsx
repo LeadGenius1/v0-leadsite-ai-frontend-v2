@@ -23,6 +23,7 @@ import {
   MessageCircle,
   AlertCircle,
 } from "lucide-react"
+import { Button } from "@/components/ui/button" // Assuming Button is in this path
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
@@ -152,6 +153,25 @@ interface Schedule {
   run_time: string
   next_run?: string
   last_run?: string
+}
+
+const getGreeting = () => {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 17) return "Good afternoon"
+  return "Good evening"
+}
+
+const getFirstName = (profile: ProfileData | null) => {
+  if (profile?.business_name) {
+    // Use first word of business name
+    return profile.business_name.split(" ")[0]
+  }
+  if (profile?.email) {
+    // Extract name before @ symbol
+    return profile.email.split("@")[0]
+  }
+  return "there"
 }
 
 export default function DashboardPage() {
@@ -700,11 +720,31 @@ export default function DashboardPage() {
             </div>
 
             <h1 className="text-3xl md:text-4xl font-medium tracking-tight bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent mb-2">
-              Welcome back, {profile?.name || profile?.email}
+              {getGreeting()}, {getFirstName(profile)}! 👋
             </h1>
 
             <p className="text-neutral-400 text-sm font-light">Here's your AI-powered lead generation overview</p>
           </div>
+
+          {trialDaysLeft > 0 && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎉</span>
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} left in your free trial
+                  </p>
+                  <p className="text-xs text-neutral-400">Unlock unlimited leads and emails</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600"
+              >
+                Upgrade Now
+              </Button>
+            </div>
+          )}
 
           {/* Dashboard Tab */}
           {activeSection === "dashboard" && (

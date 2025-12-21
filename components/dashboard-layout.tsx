@@ -1,13 +1,19 @@
 "use client"
 
 import type React from "react"
-
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, Mail, Settings, Sparkles, Menu, X } from "lucide-react"
-import { useState } from "react"
+import { LayoutDashboard, Users, Mail, Settings, Sparkles, Menu, X, ChevronDown, LogOut, User } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -19,6 +25,61 @@ const navigation = [
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [user, setUser] = useState<{
+    email: string
+    company_name: string
+    plan_tier: string
+  } | null>(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem("sessionToken")
+        if (!token) return
+
+        const res = await fetch("https://api.leadsite.ai/api/auth/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          setUser(data.user)
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error)
+      }
+    }
+
+    fetchUser()
+  }, [])
+
+  const getAvatarLetter = () => {
+    if (user?.company_name) {
+      return user.company_name.charAt(0).toUpperCase()
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase()
+    }
+    return "U"
+  }
+
+  const getPlanBadge = () => {
+    const plan = user?.plan_tier || "free"
+    const planNames: Record<string, string> = {
+      free: "Free Trial",
+      starter: "Starter",
+      ramp: "Ramp",
+      accelerate: "Accelerate",
+    }
+    return planNames[plan] || "Free"
+  }
+
+  const handleLogout = () => {
+    localStorage.clear()
+    window.location.href = "/login"
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,15 +130,40 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="p-4 border-t">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                JD
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">John Doe</p>
-                <p className="text-xs text-muted-foreground truncate">john@example.com</p>
-              </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 px-4 py-3 w-full hover:bg-secondary rounded-lg transition-colors">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">
+                    {getAvatarLetter()}
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium truncate">{user?.company_name || user?.email || "Loading..."}</p>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                        {getPlanBadge()}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="flex items-center gap-2 cursor-pointer">
+                    <User className="h-4 w-4" />
+                    <span>Profile Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-red-600 cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </aside>
