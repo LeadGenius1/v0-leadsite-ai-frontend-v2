@@ -381,7 +381,7 @@ export default function DashboardPage() {
   const handleAnalyzeBusiness = async () => {
     setIsAnalyzing(true)
     try {
-      await apiCall("/api/profile/analyze", { method: "POST" })
+      await apiCall("/api/profile/analyze", { method: "POST", body: JSON.stringify({}) })
       showToast("info", "Business analysis in progress...")
 
       // Poll for completion
@@ -514,7 +514,7 @@ export default function DashboardPage() {
 
   const handleProcessReplies = async () => {
     try {
-      await apiCall("/api/workflows/process-replies", { method: "POST" })
+      await apiCall("/api/workflows/process-replies", { method: "POST", body: JSON.stringify({}) })
       showToast("success", "Processing replies...")
       fetchActivities()
       fetchQuickStats()
