@@ -483,7 +483,7 @@ export default function DashboardPage() {
     setIsDiscovering(true)
     try {
       const customerId = localStorage.getItem("customerId")
-      const data = await apiCall("/api/workflows/discover-prospects", {
+      const data = await apiCall("/api/discover-prospects", {
         method: "POST",
         body: JSON.stringify({ businessId: profile?.id, customerId }),
       })
