@@ -22,7 +22,6 @@ import {
   MousePointerClick,
   MessageCircle,
   AlertCircle,
-  Hand,
   Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button" // Assuming Button is in this path
@@ -826,7 +825,6 @@ export default function DashboardPage() {
 
             <h1 className="text-3xl md:text-4xl font-medium tracking-tight bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent mb-2">
               {getGreeting()}, {getCompanyDisplayName(dashboardUser)}!
-              <Hand className="inline-block w-6 h-6 ml-2 text-cyan-300/90 align-[-0.15em]" />
             </h1>
 
             <p className="text-neutral-400 text-sm font-light">Here's your AI-powered lead generation overview</p>
