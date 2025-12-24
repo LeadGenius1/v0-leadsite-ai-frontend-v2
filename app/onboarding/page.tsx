@@ -124,7 +124,12 @@ export default function OnboardingPage() {
 
     try {
       const token = localStorage.getItem("leadsite_token")
+
+      console.log("[v0] Submitting profile data:", formData)
+      console.log("[v0] Token:", token ? "exists" : "missing")
+
       if (!token) {
+        console.error("[v0] No token found, redirecting to login")
         router.push("/login")
         return
       }
@@ -162,17 +167,24 @@ export default function OnboardingPage() {
         }),
       })
 
+      console.log("[v0] Response status:", response.status)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error("[v0] Profile save error:", errorData)
         throw new Error(errorData.error || "Failed to save profile")
       }
 
-      // Show success animation
+      const successData = await response.json()
+      console.log("[v0] Profile saved successfully:", successData)
+
       setIsAnalyzing(true)
       setTimeout(() => {
+        console.log("[v0] Redirecting to dashboard")
         window.location.href = "/dashboard"
-      }, 2000)
+      }, 1500)
     } catch (err: any) {
+      console.error("[v0] Onboarding submission error:", err)
       setError(err.message || "Failed to complete setup. Please try again.")
       setIsLoading(false)
     }
@@ -300,10 +312,12 @@ export default function OnboardingPage() {
 
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="business_name" className="block text-sm font-medium text-white mb-2">
                       Business Name <span className="text-indigo-400">*</span>
                     </label>
                     <input
+                      id="business_name"
+                      name="business_name"
                       type="text"
                       value={formData.business_name}
                       onChange={(e) => updateField("business_name", e.target.value)}
@@ -313,10 +327,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="industry" className="block text-sm font-medium text-white mb-2">
                       Industry Keywords <span className="text-indigo-400">*</span>
                     </label>
                     <input
+                      id="industry"
+                      name="industry"
                       type="text"
                       value={formData.industry}
                       onChange={(e) => updateField("industry", e.target.value)}
@@ -330,12 +346,14 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="website" className="block text-sm font-medium text-white mb-2">
                       Website URL <span className="text-indigo-400">*</span>
                     </label>
                     <div className="relative">
                       <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
                       <input
+                        id="website"
+                        name="website"
                         type="text"
                         value={formData.website}
                         onChange={(e) => updateField("website", e.target.value)}
@@ -366,10 +384,12 @@ export default function OnboardingPage() {
 
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="owner_name" className="block text-sm font-medium text-white mb-2">
                       Owner Name <span className="text-indigo-400">*</span>
                     </label>
                     <input
+                      id="owner_name"
+                      name="owner_name"
                       type="text"
                       value={formData.owner_name}
                       onChange={(e) => updateField("owner_name", e.target.value)}
@@ -379,10 +399,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
                       Email <span className="text-indigo-400">*</span>
                     </label>
                     <input
+                      id="email"
+                      name="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => updateField("email", e.target.value)}
@@ -392,8 +414,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Phone</label>
+                    <label htmlFor="phone" className="block text-sm font-medium text-white mb-2">
+                      Phone
+                    </label>
                     <input
+                      id="phone"
+                      name="phone"
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => updateField("phone", e.target.value)}
@@ -403,8 +429,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Business Description</label>
+                    <label htmlFor="description" className="block text-sm font-medium text-white mb-2">
+                      Business Description
+                    </label>
                     <textarea
+                      id="description"
+                      name="description"
                       value={formData.description}
                       onChange={(e) => updateField("description", e.target.value)}
                       placeholder="Describe what your business does..."
@@ -432,8 +462,12 @@ export default function OnboardingPage() {
 
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Address</label>
+                    <label htmlFor="address" className="block text-sm font-medium text-white mb-2">
+                      Address
+                    </label>
                     <input
+                      id="address"
+                      name="address"
                       type="text"
                       value={formData.address}
                       onChange={(e) => updateField("address", e.target.value)}
@@ -444,8 +478,12 @@ export default function OnboardingPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-white mb-2">City</label>
+                      <label htmlFor="city" className="block text-sm font-medium text-white mb-2">
+                        City
+                      </label>
                       <input
+                        id="city"
+                        name="city"
                         type="text"
                         value={formData.city}
                         onChange={(e) => updateField("city", e.target.value)}
@@ -455,8 +493,12 @@ export default function OnboardingPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-white mb-2">State</label>
+                      <label htmlFor="state" className="block text-sm font-medium text-white mb-2">
+                        State
+                      </label>
                       <input
+                        id="state"
+                        name="state"
                         type="text"
                         value={formData.state}
                         onChange={(e) => updateField("state", e.target.value)}
@@ -468,8 +510,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">ZIP Code</label>
+                    <label htmlFor="zip" className="block text-sm font-medium text-white mb-2">
+                      ZIP Code
+                    </label>
                     <input
+                      id="zip"
+                      name="zip"
                       type="text"
                       value={formData.zip}
                       onChange={(e) => updateField("zip", e.target.value)}
@@ -479,10 +525,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="target_location" className="block text-sm font-medium text-white mb-2">
                       Target Location <span className="text-indigo-400">*</span>
                     </label>
                     <input
+                      id="target_location"
+                      name="target_location"
                       type="text"
                       value={formData.target_location}
                       onChange={(e) => updateField("target_location", e.target.value)}
@@ -514,8 +562,14 @@ export default function OnboardingPage() {
                     <label className="block text-sm font-medium text-white mb-2">Target Company Sizes</label>
                     <div className="grid grid-cols-2 gap-2">
                       {companySizeOptions.map((size) => (
-                        <label key={size} className="flex items-center space-x-2 cursor-pointer group">
+                        <label
+                          key={size}
+                          htmlFor={`company_size_${size}`}
+                          className="flex items-center space-x-2 cursor-pointer group"
+                        >
                           <input
+                            id={`company_size_${size}`}
+                            name="target_company_size"
                             type="checkbox"
                             checked={formData.target_company_size.includes(size)}
                             onChange={(e) => {
@@ -548,8 +602,14 @@ export default function OnboardingPage() {
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {jobLevelOptions.map((level) => (
-                        <label key={level} className="flex items-center space-x-2 cursor-pointer group">
+                        <label
+                          key={level}
+                          htmlFor={`job_level_${level.replace(/\s+/g, "_")}`}
+                          className="flex items-center space-x-2 cursor-pointer group"
+                        >
                           <input
+                            id={`job_level_${level.replace(/\s+/g, "_")}`}
+                            name="target_job_levels"
                             type="checkbox"
                             checked={formData.target_job_levels.includes(level)}
                             onChange={(e) => {
@@ -574,10 +634,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="services" className="block text-sm font-medium text-white mb-2">
                       Services <span className="text-indigo-400">*</span>
                     </label>
                     <textarea
+                      id="services"
+                      name="services"
                       value={formData.services}
                       onChange={(e) => updateField("services", e.target.value)}
                       placeholder="What services/products do you offer? This helps us find the right prospects."
@@ -591,8 +653,12 @@ export default function OnboardingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Unique Selling Points</label>
+                    <label htmlFor="unique_selling_points" className="block text-sm font-medium text-white mb-2">
+                      Unique Selling Points
+                    </label>
                     <textarea
+                      id="unique_selling_points"
+                      name="unique_selling_points"
                       value={formData.unique_selling_points}
                       onChange={(e) => updateField("unique_selling_points", e.target.value)}
                       placeholder="What makes you unique? Why should prospects choose you over competitors?"
