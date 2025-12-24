@@ -123,7 +123,7 @@ export default function OnboardingPage() {
     setError(null)
 
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("leadsite_token")
       if (!token) {
         router.push("/login")
         return
