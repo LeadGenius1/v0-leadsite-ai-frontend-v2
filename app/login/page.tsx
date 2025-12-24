@@ -39,8 +39,8 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (data.token) {
+        localStorage.setItem("leadsite_token", data.token)
         localStorage.setItem("sessionToken", data.token)
-        localStorage.setItem("token", data.token)
       } else {
         throw new Error("No token received from server")
       }

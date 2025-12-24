@@ -47,7 +47,7 @@ export default function SignupPage() {
         throw new Error("Server did not return authentication token")
       }
 
-      localStorage.setItem("token", data.token)
+      localStorage.setItem("leadsite_token", data.token)
 
       if (data.user?.id) {
         localStorage.setItem("userId", data.user.id.toString())

@@ -40,7 +40,7 @@ export default function NewBusinessPage() {
     setError(null)
     setLoading(true)
 
-    const token = localStorage.getItem("token")
+    const token = localStorage.getItem("leadsite_token")
     if (!token) {
       router.push("/login")
       return
@@ -57,7 +57,7 @@ export default function NewBusinessPage() {
       })
 
       if (response.status === 401) {
-        localStorage.removeItem("token")
+        localStorage.removeItem("leadsite_token")
         router.push("/login")
         return
       }
@@ -77,7 +77,7 @@ export default function NewBusinessPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
+    localStorage.removeItem("leadsite_token")
     router.push("/login")
   }
 

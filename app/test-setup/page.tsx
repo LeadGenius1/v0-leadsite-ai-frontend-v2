@@ -69,7 +69,7 @@ export default function TestSetupPage() {
           if (!res.ok) throw new Error(data.message || "Registration failed")
           if (data.token) {
             setCreatedToken(data.token)
-            localStorage.setItem("token", data.token)
+            localStorage.setItem("leadsite_token", data.token)
           }
           if (data.customerId) {
             setCreatedUserId(data.customerId)
@@ -94,7 +94,7 @@ export default function TestSetupPage() {
           if (!res.ok) throw new Error(data.message || "Login failed")
           if (data.token) {
             setCreatedToken(data.token)
-            localStorage.setItem("token", data.token)
+            localStorage.setItem("leadsite_token", data.token)
           }
           return { message: `Token received: ${data.token?.substring(0, 20)}...`, duration: Date.now() - start }
         },
@@ -103,7 +103,7 @@ export default function TestSetupPage() {
         name: "4. Check Auth Status",
         run: async () => {
           const start = Date.now()
-          const token = localStorage.getItem("token")
+          const token = localStorage.getItem("leadsite_token")
           if (!token) throw new Error("No token in localStorage")
 
           const res = await fetch(`${API_BASE}/auth/me`, {
@@ -118,7 +118,7 @@ export default function TestSetupPage() {
         name: "5. Create Business Profile",
         run: async () => {
           const start = Date.now()
-          const token = localStorage.getItem("token")
+          const token = localStorage.getItem("leadsite_token")
 
           const profileData = {
             website_url: testUser.website_url,
@@ -145,7 +145,7 @@ export default function TestSetupPage() {
         name: "6. Get Profile",
         run: async () => {
           const start = Date.now()
-          const token = localStorage.getItem("token")
+          const token = localStorage.getItem("leadsite_token")
 
           const res = await fetch(`${API_BASE}/api/profile`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -162,7 +162,7 @@ export default function TestSetupPage() {
         name: "7. Get Dashboard Data",
         run: async () => {
           const start = Date.now()
-          const token = localStorage.getItem("token")
+          const token = localStorage.getItem("leadsite_token")
 
           const res = await fetch(`${API_BASE}/api/dashboard`, {
             headers: { Authorization: `Bearer ${token}` },
