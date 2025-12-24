@@ -15,8 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
-
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Clients", href: "/dashboard/clients", icon: Users },
@@ -31,30 +29,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     email: string
     company_name: string
     plan_tier: string
-    trial_days_left?: number
   } | null>(null)
-
-  const getAuthToken = () => {
-    return localStorage.getItem("token") || localStorage.getItem("sessionToken") || ""
-  }
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = getAuthToken()
+        const token = localStorage.getItem("sessionToken")
         if (!token) return
 
-        const res = await fetch(`${API_BASE_URL}/api/dashboard`, {
+        const res = await fetch("https://api.leadsite.ai/api/auth/me", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         })
-
-        if (res.status === 401) {
-          localStorage.clear()
-          window.location.href = "/login"
-          return
-        }
 
         if (res.ok) {
           const data = await res.json()
@@ -191,23 +178,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        <main className="p-6 lg:p-8">
-          {typeof user?.trial_days_left === "number" && user.trial_days_left > 0 && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🎉</span>
-                <p className="text-sm font-medium">
-                  {user.trial_days_left} {user.trial_days_left === 1 ? "day" : "days"} left in your free trial
-                </p>
-                <span className="text-sm font-medium text-muted-foreground">|</span>
-              </div>
-              <Button size="sm" asChild className="bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600">
-                <Link href="/settings">Upgrade Now</Link>
-              </Button>
-            </div>
-          )}
-          {children}
-        </main>
+        <main className="p-6 lg:p-8">{children}</main>
       </div>
     </div>
   )

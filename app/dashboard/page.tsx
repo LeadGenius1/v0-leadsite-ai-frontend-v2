@@ -27,23 +27,8 @@ import { Button } from "@/components/ui/button" // Assuming Button is in this pa
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
-interface DashboardUser {
-  company_name?: string
-  email?: string
-  plan_tier?: string
-  trial_days_left?: number
-}
-
-interface DashboardApiResponse {
-  user: DashboardUser
-}
-
-const getAuthToken = () => {
-  return localStorage.getItem("token") || localStorage.getItem("sessionToken") || ""
-}
-
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const token = getAuthToken()
+  const token = localStorage.getItem("sessionToken")
 
   const config: RequestInit = {
     headers: {
@@ -177,33 +162,6 @@ const getGreeting = () => {
   return "Good evening"
 }
 
-const getCompanyDisplayName = (user: DashboardUser | null) => {
-  const company = user?.company_name?.trim()
-  if (company) return company
-  const email = user?.email?.trim()
-  if (email) return email.split("@")[0] || email
-  return "there"
-}
-
-const getSidebarAvatarLetter = (user: DashboardUser | null) => {
-  const company = user?.company_name?.trim()
-  if (company) return company.charAt(0).toUpperCase()
-  const email = user?.email?.trim()
-  if (email) return email.charAt(0).toUpperCase()
-  return "U"
-}
-
-const getPlanLabel = (planTier?: string) => {
-  const plan = (planTier || "free").toLowerCase()
-  const planNames: Record<string, string> = {
-    free: "Free Trial",
-    starter: "Starter",
-    ramp: "Ramp",
-    accelerate: "Accelerate",
-  }
-  return planNames[plan] || "Free"
-}
-
 const getFirstName = (profile: ProfileData | null) => {
   if (profile?.business_name) {
     // Use first word of business name
@@ -219,7 +177,6 @@ const getFirstName = (profile: ProfileData | null) => {
 export default function DashboardPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [dashboardUser, setDashboardUser] = useState<DashboardUser | null>(null)
 
   const [quickStats, setQuickStats] = useState<QuickStats>({
     totalProspects: 0,
@@ -269,18 +226,20 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const token = getAuthToken()
-    console.log("[DASHBOARD] Auth check - Token exists:", !!token)
-    console.log("[DASHBOARD] Token value:", token ? `${token.substring(0, 20)}...` : "null")
+    const token = localStorage.getItem("sessionToken")
+    // REMOVED DEBUG CONSOLE LOGS
+    // console.log("[DASHBOARD] Auth check - Token exists:", !!token)
+    // console.log("[DASHBOARD] Token value:", token ? `${token.substring(0, 20)}...` : "null")
 
     if (!token) {
-      console.log("[DASHBOARD] No token found, redirecting to login")
+      // REMOVED DEBUG CONSOLE LOGS
+      // console.log("[DASHBOARD] No token found, redirecting to login")
       window.location.href = "/login"
       return
     }
 
-    console.log("[DASHBOARD] Token valid, fetching dashboard data")
-    fetchDashboardUser()
+    // REMOVED DEBUG CONSOLE LOGS
+    // console.log("[DASHBOARD] Token valid, fetching dashboard data")
     fetchDashboard()
     fetchQuickStats()
     fetchActivities()
@@ -299,36 +258,6 @@ export default function DashboardPage() {
       return () => clearInterval(interval)
     }
   }, [activeSection])
-
-  const fetchDashboardUser = async () => {
-    try {
-      const token = getAuthToken()
-      if (!token) return
-
-      const res = await fetch(`${API_BASE_URL}/api/dashboard`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (res.status === 401) {
-        localStorage.clear()
-        window.location.href = "/login"
-        return
-      }
-
-      if (!res.ok) return
-
-      const data = (await res.json()) as DashboardApiResponse
-      setDashboardUser(data.user || null)
-
-      if (typeof data.user?.trial_days_left === "number") {
-        setTrialDaysLeft(Math.max(0, data.user.trial_days_left))
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard user:", error)
-    }
-  }
 
   const fetchDashboard = async () => {
     try {
@@ -455,7 +384,7 @@ export default function DashboardPage() {
   const handleAnalyzeBusiness = async () => {
     setIsAnalyzing(true)
     try {
-      await apiCall("/api/profile/analyze", { method: "POST", body: JSON.stringify({}) })
+      await apiCall("/api/profile/analyze", { method: "POST" })
       showToast("info", "Business analysis in progress...")
 
       // Poll for completion
@@ -483,7 +412,7 @@ export default function DashboardPage() {
     setIsDiscovering(true)
     try {
       const customerId = localStorage.getItem("customerId")
-      const data = await apiCall("/api/discover-prospects", {
+      const data = await apiCall("/api/workflows/discover-prospects", {
         method: "POST",
         body: JSON.stringify({ businessId: profile?.id, customerId }),
       })
@@ -588,7 +517,7 @@ export default function DashboardPage() {
 
   const handleProcessReplies = async () => {
     try {
-      await apiCall("/api/workflows/process-replies", { method: "POST", body: JSON.stringify({}) })
+      await apiCall("/api/workflows/process-replies", { method: "POST" })
       showToast("success", "Processing replies...")
       fetchActivities()
       fetchQuickStats()
@@ -787,18 +716,12 @@ export default function DashboardPage() {
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                  {getSidebarAvatarLetter(dashboardUser)}
+                  {profile?.name?.charAt(0) || "U"}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
-                  {dashboardUser?.company_name || dashboardUser?.email || profile?.business_name || profile?.email || "Loading..."}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-white/80 font-medium">
-                    {getPlanLabel(dashboardUser?.plan_tier)}
-                  </span>
-                </div>
+                <p className="text-sm font-medium text-white truncate">{profile?.name}</p>
+                <p className="text-xs text-neutral-500 truncate">{profile?.email}</p>
               </div>
             </div>
             <button
@@ -823,7 +746,7 @@ export default function DashboardPage() {
             </div>
 
             <h1 className="text-3xl md:text-4xl font-medium tracking-tight bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent mb-2">
-              {getGreeting()}, {getCompanyDisplayName(dashboardUser)}! 👋
+              {getGreeting()}, {getFirstName(profile)}! 👋
             </h1>
 
             <p className="text-neutral-400 text-sm font-light">Here's your AI-powered lead generation overview</p>
@@ -833,10 +756,12 @@ export default function DashboardPage() {
             <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-lg flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🎉</span>
-                <p className="text-sm font-medium text-white">
-                  {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} left in your free trial
-                </p>
-                <span className="text-sm font-medium text-white/40">|</span>
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} left in your free trial
+                  </p>
+                  <p className="text-xs text-neutral-400">Unlock unlimited leads and emails</p>
+                </div>
               </div>
               <Button
                 size="sm"
