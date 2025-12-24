@@ -746,7 +746,7 @@ export default function DashboardPage() {
             </div>
 
             <h1 className="text-3xl md:text-4xl font-medium tracking-tight bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent mb-2">
-              {getGreeting()}, {getFirstName(profile)}! 👋
+              {getGreeting()}, {getFirstName(profile)}!
             </h1>
 
             <p className="text-neutral-400 text-sm font-light">Here's your AI-powered lead generation overview</p>
