@@ -88,34 +88,8 @@ export default function OnboardingPage() {
     }
 
     if (currentStep < 4) {
-      setIsLoading(true)
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) {
-          router.push("/login")
-          return
-        }
-
-        const response = await fetch("https://api.leadsite.ai/api/profile", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to save profile")
-        }
-
-        setCurrentStep(currentStep + 1)
-      } catch (err: any) {
-        setError(err.message || "Failed to save progress. Please try again.")
-      } finally {
-        setIsLoading(false)
-      }
+      setCurrentStep(currentStep + 1)
+      setError(null)
     } else {
       await handleSubmit()
     }
@@ -595,17 +569,8 @@ export default function OnboardingPage() {
                   )
                 ) : (
                   <>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        Continue
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
+                    Continue
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
