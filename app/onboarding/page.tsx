@@ -2,19 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Building2,
-  Globe,
-  Target,
-  Sparkles,
-  ArrowRight,
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  Loader2,
-  Mail,
-  Users,
-} from "lucide-react"
+import { Building2, Globe, Target, Sparkles, ArrowRight, ArrowLeft, Check, Loader2, Mail, Users } from "lucide-react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
@@ -28,7 +16,7 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState({
     // Step 1: Business Basics
     business_name: "",
-    industry: "",
+    industry: "", // Now free text instead of dropdown
     website: "",
 
     // Step 2: Owner & Contact
@@ -42,15 +30,38 @@ export default function OnboardingPage() {
     city: "",
     state: "",
     zip: "",
-    target_location: "",
+    target_location: "United States",
 
-    // Step 4: Target Audience
-    target_customer_type: "",
+    // Step 4: Target Audience (updated fields)
+    target_company_size: [] as string[],
+    target_job_levels: [] as string[],
     services: "",
     unique_selling_points: "",
   })
 
-  const industries = ["Technology", "SaaS", "E-commerce", "Services", "Manufacturing", "Healthcare", "Finance", "Other"]
+  const companySizeOptions = [
+    "0 - 25",
+    "25 - 100",
+    "100 - 250",
+    "250 - 1000",
+    "1K - 10K",
+    "10K - 50K",
+    "50K - 100K",
+    "> 100K",
+  ]
+
+  const jobLevelOptions = [
+    "C-Level",
+    "VP-Level",
+    "Director-Level",
+    "Manager-Level",
+    "Owner",
+    "Staff",
+    "Entry level",
+    "Mid-Senior level",
+    "Director",
+    "Associate",
+  ]
 
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -59,7 +70,7 @@ export default function OnboardingPage() {
 
   const isStepValid = () => {
     if (currentStep === 1) {
-      return formData.business_name.trim() && formData.industry && formData.website.trim()
+      return formData.business_name.trim() && formData.industry.trim() && formData.website.trim()
     }
     if (currentStep === 2) {
       return formData.owner_name.trim() && formData.email.trim()
@@ -68,12 +79,16 @@ export default function OnboardingPage() {
       return formData.target_location.trim()
     }
     if (currentStep === 4) {
-      return formData.target_customer_type.trim().length >= 10 && formData.services.trim().length >= 10
+      return (
+        formData.industry.trim().length >= 3 &&
+        formData.target_job_levels.length > 0 &&
+        formData.services.trim().length >= 10
+      )
     }
     return true
   }
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (!isStepValid()) {
       if (currentStep === 1) {
         setError("Please fill in business name, industry, and website")
@@ -82,7 +97,7 @@ export default function OnboardingPage() {
       } else if (currentStep === 3) {
         setError("Please specify your target location")
       } else if (currentStep === 4) {
-        setError("Please provide at least 10 characters for target customer type and services")
+        setError("Please provide industry keywords, select at least 1 job level, and describe your services")
       }
       return
     }
@@ -91,7 +106,8 @@ export default function OnboardingPage() {
       setCurrentStep(currentStep + 1)
       setError(null)
     } else {
-      await handleSubmit()
+      // Step 4: Now submit all data in one POST request
+      handleSubmit()
     }
   }
 
@@ -119,7 +135,31 @@ export default function OnboardingPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          // Step 1 data
+          business_name: formData.business_name,
+          industry: formData.industry,
+          website: formData.website,
+
+          // Step 2 data
+          owner_name: formData.owner_name,
+          email: formData.email,
+          phone: formData.phone,
+          description: formData.description,
+
+          // Step 3 data
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          target_location: formData.target_location,
+
+          // Step 4 data
+          target_company_size: formData.target_company_size,
+          target_job_levels: formData.target_job_levels,
+          services: formData.services,
+          unique_selling_points: formData.unique_selling_points,
+        }),
       })
 
       if (!response.ok) {
@@ -127,6 +167,7 @@ export default function OnboardingPage() {
         throw new Error(errorData.error || "Failed to save profile")
       }
 
+      // Show success animation
       setIsAnalyzing(true)
       setTimeout(() => {
         window.location.href = "/dashboard"
@@ -273,25 +314,19 @@ export default function OnboardingPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">
-                      Industry <span className="text-indigo-400">*</span>
+                      Industry Keywords <span className="text-indigo-400">*</span>
                     </label>
-                    <div className="relative">
-                      <select
-                        value={formData.industry}
-                        onChange={(e) => updateField("industry", e.target.value)}
-                        className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 appearance-none cursor-pointer text-sm"
-                      >
-                        <option value="" className="bg-neutral-900">
-                          Select your industry
-                        </option>
-                        {industries.map((ind) => (
-                          <option key={ind} value={ind} className="bg-neutral-900">
-                            {ind}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 pointer-events-none" />
-                    </div>
+                    <input
+                      type="text"
+                      value={formData.industry}
+                      onChange={(e) => updateField("industry", e.target.value)}
+                      placeholder="e.g., Technology, SaaS, Healthcare, Real Estate, Construction"
+                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600"
+                    />
+                    <p className="text-neutral-500 text-xs mt-2">
+                      <Sparkles className="w-3 h-3 inline mr-1" />
+                      Enter keywords that describe your industry (used for prospect search)
+                    </p>
                   </div>
 
                   <div>
@@ -451,7 +486,7 @@ export default function OnboardingPage() {
                       type="text"
                       value={formData.target_location}
                       onChange={(e) => updateField("target_location", e.target.value)}
-                      placeholder="e.g., United States, California, New York, North America, Global"
+                      placeholder="United States"
                       className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600"
                     />
                     <p className="text-neutral-500 text-xs mt-2">
@@ -463,7 +498,6 @@ export default function OnboardingPage() {
               </>
             )}
 
-            {/* Step 4: Target Audience */}
             {currentStep === 4 && (
               <>
                 <div className="text-center mb-8">
@@ -477,20 +511,66 @@ export default function OnboardingPage() {
 
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Target Customer Type <span className="text-indigo-400">*</span>
-                    </label>
-                    <textarea
-                      value={formData.target_customer_type}
-                      onChange={(e) => updateField("target_customer_type", e.target.value)}
-                      placeholder="Describe your ideal customer. Examples: 'Small businesses with 10-50 employees', 'E-commerce companies', 'SaaS founders', 'Marketing agencies'"
-                      rows={4}
-                      maxLength={500}
-                      className="w-full bg-black/50 border border-white/10 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm placeholder:text-neutral-600 resize-none"
-                    />
+                    <label className="block text-sm font-medium text-white mb-2">Target Company Sizes</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {companySizeOptions.map((size) => (
+                        <label key={size} className="flex items-center space-x-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={formData.target_company_size.includes(size)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                updateField("target_company_size", [...formData.target_company_size, size])
+                              } else {
+                                updateField(
+                                  "target_company_size",
+                                  formData.target_company_size.filter((s) => s !== size),
+                                )
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-white/20 bg-black/50 text-indigo-500 focus:ring-indigo-500/50 focus:ring-offset-0"
+                          />
+                          <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">
+                            {size}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                     <p className="text-neutral-500 text-xs mt-2">
-                      {formData.target_customer_type.length}/500 characters (minimum 10)
+                      <Sparkles className="w-3 h-3 inline mr-1" />
+                      Select all company sizes you want to target
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Target Job Levels <span className="text-indigo-400">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {jobLevelOptions.map((level) => (
+                        <label key={level} className="flex items-center space-x-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={formData.target_job_levels.includes(level)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                updateField("target_job_levels", [...formData.target_job_levels, level])
+                              } else {
+                                updateField(
+                                  "target_job_levels",
+                                  formData.target_job_levels.filter((l) => l !== level),
+                                )
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-white/20 bg-black/50 text-indigo-500 focus:ring-indigo-500/50 focus:ring-offset-0"
+                          />
+                          <span className="text-sm text-neutral-300 group-hover:text-white transition-colors">
+                            {level}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-neutral-500 text-xs mt-2">Select at least 1 job level to target</p>
                   </div>
 
                   <div>
