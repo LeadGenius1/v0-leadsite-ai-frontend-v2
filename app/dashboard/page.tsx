@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button" // Assuming Button is in this pa
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem("sessionToken")
+  const token = localStorage.getItem("leadsite_token")
 
   const config: RequestInit = {
     headers: {
@@ -226,7 +226,7 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const token = localStorage.getItem("sessionToken")
+    const token = localStorage.getItem("leadsite_token")
     // REMOVED DEBUG CONSOLE LOGS
     // console.log("[DASHBOARD] Auth check - Token exists:", !!token)
     // console.log("[DASHBOARD] Token value:", token ? `${token.substring(0, 20)}...` : "null")
