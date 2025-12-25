@@ -389,28 +389,40 @@ export default function DashboardPage() {
   }, [activeSection])
 
   const handleAnalyzeBusiness = async () => {
-    if (!profile) {
-      showToast("error", "Profile data not loaded. Please refresh the page.")
-      return
-    }
-
-    setIsAnalyzing(true)
     try {
-      const response = await apiCall("/api/profile/analyze", {
+      setIsAnalyzing(true)
+
+      const res = await fetch("/api/profile/analyze", {
         method: "POST",
-        body: JSON.stringify({
-          action: "analyze_business",
-          profile,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
       })
 
-      showToast("info", "Business analysis in progress...")
-      setIsAnalyzing(false)
+      if (!res.ok) {
+        // Try to parse error message from backend
+        let errorMessage = "Analyze request failed"
+        try {
+          const errorData = await res.json()
+          errorMessage = errorData.message || errorMessage
+        } catch (e) {
+          // Ignore if response is not JSON or empty
+        }
+        throw new Error(errorMessage)
+      }
+
+      // Assuming the backend returns a success confirmation, or perhaps some initial data
+      // const data = await res.json(); // Uncomment if backend returns data to be processed
+
+      showToast("success", "Business analysis started")
       fetchQuickStats()
       fetchActivities()
-    } catch (error: any) {
+    } catch (err: any) {
+      console.error(err)
+      showToast("error", err.message || "Failed to start analysis")
+    } finally {
       setIsAnalyzing(false)
-      showToast("error", error.message || "Failed to analyze business")
     }
   }
 
