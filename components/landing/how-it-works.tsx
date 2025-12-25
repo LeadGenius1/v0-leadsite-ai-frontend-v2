@@ -1,4 +1,11 @@
+"use client"
+
+import { useState } from "react"
+import { ChevronDown } from "lucide-react"
+
 export function HowItWorks() {
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+
   return (
     <section className="relative z-10 py-24 px-6 max-w-5xl mx-auto">
       <h2 className="text-center text-2xl font-medium tracking-tight mb-16 text-white">The Integration Process</h2>
@@ -59,6 +66,38 @@ export function HowItWorks() {
             <div className="md:w-1/2 md:pl-12 order-3" />
           </div>
         </div>
+      </div>
+
+      <div className="mt-16 max-w-2xl mx-auto">
+        <button
+          onClick={() => setExpandedSection(expandedSection === "targeting" ? null : "targeting")}
+          className="w-full flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
+        >
+          <span className="text-sm font-medium text-white">How targeting works</span>
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${
+              expandedSection === "targeting" ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {expandedSection === "targeting" && (
+          <div className="mt-2 p-4 rounded-lg border border-white/10 bg-black/20 text-sm text-gray-400 leading-relaxed space-y-3">
+            <p>
+              LeadSite uses your onboarding inputs — industry, services, location, and ideal customer profile — to
+              define who the AI searches for.
+            </p>
+            <p className="font-medium text-gray-300">You control targeting by:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Geography (local, regional, national)</li>
+              <li>Industry and business type</li>
+              <li>Company size and decision-maker level</li>
+            </ul>
+            <p className="text-xs text-gray-500 mt-2">
+              You can adjust or refine targeting at any time from your dashboard.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   )

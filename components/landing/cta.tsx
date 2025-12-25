@@ -12,9 +12,14 @@ export function CTA() {
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
           <div className="text-center">
+            <p className="text-xs text-indigo-400 mb-3">
+              Now accepting early customers ahead of our January 2026 public launch.
+            </p>
+
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3">
               Ready to scale your leads?
             </h2>
+
             <p className="text-xs sm:text-sm text-gray-400 mb-5 sm:mb-6 max-w-lg mx-auto">
               Start your free trial today. No credit card required. Enter your website URL and see prospects in your
               dashboard within minutes.

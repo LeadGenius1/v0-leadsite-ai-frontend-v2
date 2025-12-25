@@ -356,6 +356,10 @@ export function Pricing() {
             </div>
           ))}
         </div>
+
+        <p className="text-xs text-gray-500 text-center mt-8 max-w-2xl mx-auto">
+          All plans include usage controls, rate limits, and safe-sending defaults.
+        </p>
       </div>
 
       {showModal && (

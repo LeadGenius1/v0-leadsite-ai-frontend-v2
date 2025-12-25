@@ -28,6 +28,10 @@ export function Hero() {
           <span className="gradient-text">lead generation machine.</span>
         </h1>
 
+        <p className="text-xs sm:text-sm text-gray-500 max-w-2xl mx-auto mb-2 leading-relaxed">
+          LeadSite works with your existing website — no rebuild, no code, and no disruption to your current traffic.
+        </p>
+
         {/* Subheadline */}
         <p className="text-sm sm:text-base md:text-lg text-gray-400 max-w-2xl mx-auto mb-5 sm:mb-6 leading-relaxed px-4">
           Enter your website URL and let AI find your ideal customers. Personalized outreach sent automatically. No
@@ -231,6 +235,10 @@ export function Hero() {
             <div className="text-[10px] sm:text-xs text-gray-500 mt-1">Avg Reply Rate</div>
           </div>
         </div>
+
+        <p className="text-[10px] text-gray-600 max-w-xl mx-auto mt-3">
+          Metrics shown reflect aggregated platform activity and may vary by industry, targeting, and market conditions.
+        </p>
       </div>
     </section>
   )
