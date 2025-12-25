@@ -27,6 +27,13 @@ import { Button } from "@/components/ui/button" // Assuming Button is in this pa
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
+const N8N_WEBHOOKS = {
+  ANALYZE_BUSINESS: "https://leadstrategies.app.n8n.cloud/webhook/analyze-business",
+  DISCOVER_PROSPECTS: "https://leadstrategies.app.n8n.cloud/webhook/multi-api-discover",
+  SEND_EMAIL: "https://leadstrategies.app.n8n.cloud/webhook/send-email",
+  PROCESS_REPLY: "https://leadstrategies.app.n8n.cloud/webhook/process-reply",
+} as const
+
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("leadsite_token")
 
@@ -384,24 +391,27 @@ export default function DashboardPage() {
   const handleAnalyzeBusiness = async () => {
     setIsAnalyzing(true)
     try {
-      await apiCall("/api/profile/analyze", { method: "POST" })
+      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.ANALYZE_BUSINESS)
+      const token = localStorage.getItem("leadsite_token")
+
+      const response = await fetch(N8N_WEBHOOKS.ANALYZE_BUSINESS, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          businessId: profile?.id,
+          customerId: localStorage.getItem("customerId"),
+        }),
+      })
+
+      if (!response.ok) throw new Error("Analysis failed")
+
       showToast("info", "Business analysis in progress...")
-
-      // Poll for completion
-      const pollInterval = setInterval(async () => {
-        const data = await apiCall("/api/profile")
-        if (data.profile?.analysis_status === "completed") {
-          clearInterval(pollInterval)
-          setIsAnalyzing(false)
-          showToast("success", "Business analysis completed!")
-          fetchDashboard()
-        }
-      }, 3000)
-
-      setTimeout(() => {
-        clearInterval(pollInterval)
-        setIsAnalyzing(false)
-      }, 120000)
+      setIsAnalyzing(false)
+      fetchQuickStats()
+      fetchActivities()
     } catch (error: any) {
       setIsAnalyzing(false)
       showToast("error", error.message || "Failed to analyze business")
@@ -411,11 +421,24 @@ export default function DashboardPage() {
   const handleDiscoverProspects = async () => {
     setIsDiscovering(true)
     try {
+      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.DISCOVER_PROSPECTS)
+      const token = localStorage.getItem("leadsite_token")
       const customerId = localStorage.getItem("customerId")
-      const data = await apiCall("/api/discover-prospects", {
+
+      const response = await fetch(N8N_WEBHOOKS.DISCOVER_PROSPECTS, {
         method: "POST",
-        body: JSON.stringify({ businessId: profile?.id, customerId }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          businessId: profile?.id,
+          customerId,
+        }),
       })
+
+      if (!response.ok) throw new Error("Discovery failed")
+      const data = await response.json()
 
       showToast("success", `Found ${data.count || 0} prospects!`)
       setIsDiscovering(false)
@@ -460,10 +483,21 @@ export default function DashboardPage() {
 
     setIsSending(true)
     try {
-      await apiCall("/api/workflows/send-campaign", {
+      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.SEND_EMAIL)
+      const token = localStorage.getItem("leadsite_token")
+
+      const response = await fetch(N8N_WEBHOOKS.SEND_EMAIL, {
         method: "POST",
-        body: JSON.stringify({ campaignId: campaigns[0].id }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          campaignId: campaigns[0].id,
+        }),
       })
+
+      if (!response.ok) throw new Error("Send failed")
 
       showToast("success", "Campaign sent successfully!")
       setIsSending(false)
@@ -517,7 +551,22 @@ export default function DashboardPage() {
 
   const handleProcessReplies = async () => {
     try {
-      await apiCall("/api/workflows/process-replies", { method: "POST" })
+      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.PROCESS_REPLY)
+      const token = localStorage.getItem("leadsite_token")
+
+      const response = await fetch(N8N_WEBHOOKS.PROCESS_REPLY, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          businessId: profile?.id,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Process replies failed")
+
       showToast("success", "Processing replies...")
       fetchActivities()
       fetchQuickStats()
