@@ -389,9 +389,16 @@ export default function DashboardPage() {
   }, [activeSection])
 
   const handleAnalyzeBusiness = async () => {
+    if (!profile) {
+      showToast("error", "Profile data not loaded. Please refresh the page.")
+      return
+    }
+
     setIsAnalyzing(true)
     try {
-      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.ANALYZE_BUSINESS)
+      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.ANALYZE_BUSINESS)
+      console.log("[v0] Profile payload:", profile)
+
       const token = localStorage.getItem("leadsite_token")
 
       const response = await fetch(N8N_WEBHOOKS.ANALYZE_BUSINESS, {
@@ -401,8 +408,8 @@ export default function DashboardPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          businessId: profile?.id,
-          customerId: localStorage.getItem("customerId"),
+          action: "analyze_business",
+          profile,
         }),
       })
 
@@ -419,11 +426,17 @@ export default function DashboardPage() {
   }
 
   const handleDiscoverProspects = async () => {
+    if (!profile) {
+      showToast("error", "Profile data not loaded. Please refresh the page.")
+      return
+    }
+
     setIsDiscovering(true)
     try {
-      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.DISCOVER_PROSPECTS)
+      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.DISCOVER_PROSPECTS)
+      console.log("[v0] Profile payload:", profile)
+
       const token = localStorage.getItem("leadsite_token")
-      const customerId = localStorage.getItem("customerId")
 
       const response = await fetch(N8N_WEBHOOKS.DISCOVER_PROSPECTS, {
         method: "POST",
@@ -432,8 +445,8 @@ export default function DashboardPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          businessId: profile?.id,
-          customerId,
+          action: "discover_prospects",
+          profile,
         }),
       })
 
@@ -451,6 +464,11 @@ export default function DashboardPage() {
   }
 
   const handleGenerateEmails = async () => {
+    if (!profile) {
+      showToast("error", "Profile data not loaded. Please refresh the page.")
+      return
+    }
+
     if (prospects.length === 0) {
       showToast("warning", "No prospects selected for email generation.")
       return
@@ -458,13 +476,27 @@ export default function DashboardPage() {
 
     setIsGenerating(true)
     try {
-      const data = await apiCall("/api/workflows/generate-emails", {
+      console.log("[v0] Triggering n8n webhook: Generate Emails")
+      console.log("[v0] Profile payload:", profile)
+
+      const token = localStorage.getItem("leadsite_token")
+
+      const response = await fetch(N8N_WEBHOOKS.SEND_EMAIL, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
+          action: "generate_emails",
+          profile,
           campaignId: campaigns[0]?.id,
           prospectIds: prospects.slice(0, 10).map((p) => p.id),
         }),
       })
+
+      if (!response.ok) throw new Error("Email generation failed")
+      const data = await response.json()
 
       showToast("success", `Generated ${data.count || 0} emails!`)
       setIsGenerating(false)
@@ -476,14 +508,21 @@ export default function DashboardPage() {
   }
 
   const handleSendCampaign = async () => {
-    if (!campaigns[0]) {
+    if (!profile) {
+      showToast("error", "Profile data not loaded. Please refresh the page.")
+      return
+    }
+
+    if (campaigns.length === 0) {
       showToast("warning", "No campaign available to send.")
       return
     }
 
     setIsSending(true)
     try {
-      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.SEND_EMAIL)
+      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.SEND_EMAIL)
+      console.log("[v0] Profile payload:", profile)
+
       const token = localStorage.getItem("leadsite_token")
 
       const response = await fetch(N8N_WEBHOOKS.SEND_EMAIL, {
@@ -493,6 +532,8 @@ export default function DashboardPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          action: "send_campaign",
+          profile,
           campaignId: campaigns[0].id,
         }),
       })
@@ -520,7 +561,7 @@ export default function DashboardPage() {
       const customerId = localStorage.getItem("customerId")
       await apiCall("/api/campaigns", {
         method: "POST",
-        body: JSON.stringify({ name: campaignName, business_id: profile?.id, customerId }),
+        body: JSON.JSON.stringify({ name: campaignName, business_id: profile?.id, customerId }),
       })
 
       showToast("success", "Campaign created successfully!")
@@ -550,8 +591,15 @@ export default function DashboardPage() {
   }
 
   const handleProcessReplies = async () => {
+    if (!profile) {
+      showToast("error", "Profile data not loaded. Please refresh the page.")
+      return
+    }
+
     try {
-      console.log("[v0] Calling webhook:", N8N_WEBHOOKS.PROCESS_REPLY)
+      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.PROCESS_REPLY)
+      console.log("[v0] Profile payload:", profile)
+
       const token = localStorage.getItem("leadsite_token")
 
       const response = await fetch(N8N_WEBHOOKS.PROCESS_REPLY, {
@@ -561,7 +609,8 @@ export default function DashboardPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          businessId: profile?.id,
+          action: "process_reply",
+          profile,
         }),
       })
 
