@@ -27,12 +27,7 @@ import { Button } from "@/components/ui/button" // Assuming Button is in this pa
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
-const N8N_WEBHOOKS = {
-  ANALYZE_BUSINESS: "https://leadstrategies.app.n8n.cloud/webhook/analyze-business",
-  DISCOVER_PROSPECTS: "https://leadstrategies.app.n8n.cloud/webhook/multi-api-discover",
-  SEND_EMAIL: "https://leadstrategies.app.n8n.cloud/webhook/send-email",
-  PROCESS_REPLY: "https://leadstrategies.app.n8n.cloud/webhook/process-reply",
-} as const
+// All AI actions now route through backend API
 
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("leadsite_token")
@@ -82,6 +77,7 @@ interface ProfileData {
   github?: string
   trial_end_date?: string
   analysis_status?: string // Added for analysis status
+  description?: string // Added for description
 
   // Onboarding data fields for AI agent
   company_size?: string
@@ -113,9 +109,12 @@ interface QuickStats {
 }
 
 interface Activity {
+  id: string // Added id for unique key
   type: "prospect_discovery" | "email_sent" | "email_opened" | "reply_received"
-  count: number
+  action: string // Changed from type to action to match update
+  count: number | null // Changed to allow null
   timestamp: string
+  details?: string // Added for activity details
   description: string
 }
 
@@ -287,6 +286,7 @@ export default function DashboardPage() {
           phone: "",
           trial_end_date: data.user.trial_end_date,
           analysis_status: data.user.profile?.analysis_status,
+          description: data.user.profile?.description, // Added description
           company_size: data.user.profile?.company_size,
           year_founded: data.user.profile?.year_founded,
           target_industries: data.user.profile?.target_industries,
@@ -396,24 +396,13 @@ export default function DashboardPage() {
 
     setIsAnalyzing(true)
     try {
-      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.ANALYZE_BUSINESS)
-      console.log("[v0] Profile payload:", profile)
-
-      const token = localStorage.getItem("leadsite_token")
-
-      const response = await fetch(N8N_WEBHOOKS.ANALYZE_BUSINESS, {
+      const response = await apiCall("/api/profile/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           action: "analyze_business",
           profile,
         }),
       })
-
-      if (!response.ok) throw new Error("Analysis failed")
 
       showToast("info", "Business analysis in progress...")
       setIsAnalyzing(false)
@@ -433,25 +422,13 @@ export default function DashboardPage() {
 
     setIsDiscovering(true)
     try {
-      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.DISCOVER_PROSPECTS)
-      console.log("[v0] Profile payload:", profile)
-
-      const token = localStorage.getItem("leadsite_token")
-
-      const response = await fetch(N8N_WEBHOOKS.DISCOVER_PROSPECTS, {
+      const data = await apiCall("/api/discover-prospects", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           action: "discover_prospects",
           profile,
         }),
       })
-
-      if (!response.ok) throw new Error("Discovery failed")
-      const data = await response.json()
 
       showToast("success", `Found ${data.count || 0} prospects!`)
       setIsDiscovering(false)
@@ -476,17 +453,8 @@ export default function DashboardPage() {
 
     setIsGenerating(true)
     try {
-      console.log("[v0] Triggering n8n webhook: Generate Emails")
-      console.log("[v0] Profile payload:", profile)
-
-      const token = localStorage.getItem("leadsite_token")
-
-      const response = await fetch(N8N_WEBHOOKS.SEND_EMAIL, {
+      const data = await apiCall("/api/workflows/generate-emails", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           action: "generate_emails",
           profile,
@@ -494,9 +462,6 @@ export default function DashboardPage() {
           prospectIds: prospects.slice(0, 10).map((p) => p.id),
         }),
       })
-
-      if (!response.ok) throw new Error("Email generation failed")
-      const data = await response.json()
 
       showToast("success", `Generated ${data.count || 0} emails!`)
       setIsGenerating(false)
@@ -520,25 +485,14 @@ export default function DashboardPage() {
 
     setIsSending(true)
     try {
-      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.SEND_EMAIL)
-      console.log("[v0] Profile payload:", profile)
-
-      const token = localStorage.getItem("leadsite_token")
-
-      const response = await fetch(N8N_WEBHOOKS.SEND_EMAIL, {
+      const response = await apiCall("/api/workflows/send-campaign", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           action: "send_campaign",
           profile,
           campaignId: campaigns[0].id,
         }),
       })
-
-      if (!response.ok) throw new Error("Send failed")
 
       showToast("success", "Campaign sent successfully!")
       setIsSending(false)
@@ -561,7 +515,7 @@ export default function DashboardPage() {
       const customerId = localStorage.getItem("customerId")
       await apiCall("/api/campaigns", {
         method: "POST",
-        body: JSON.JSON.stringify({ name: campaignName, business_id: profile?.id, customerId }),
+        body: JSON.stringify({ name: campaignName, business_id: profile?.id, customerId }),
       })
 
       showToast("success", "Campaign created successfully!")
@@ -597,24 +551,13 @@ export default function DashboardPage() {
     }
 
     try {
-      console.log("[v0] Triggering n8n webhook:", N8N_WEBHOOKS.PROCESS_REPLY)
-      console.log("[v0] Profile payload:", profile)
-
-      const token = localStorage.getItem("leadsite_token")
-
-      const response = await fetch(N8N_WEBHOOKS.PROCESS_REPLY, {
+      const response = await apiCall("/api/workflows/process-replies", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           action: "process_reply",
           profile,
         }),
       })
-
-      if (!response.ok) throw new Error("Process replies failed")
 
       showToast("success", "Processing replies...")
       fetchActivities()
@@ -1069,43 +1012,44 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-neutral-900/30 border border-white/10 overflow-hidden">
-                <div className="relative px-6 py-4 border-b border-white/5">
-                  <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-                  <h3 className="text-lg font-medium text-white">Recent Activity</h3>
-                  <p className="text-sm text-neutral-500">Latest updates from your campaigns</p>
-                </div>
-
-                {activities.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {activities.map((activity, idx) => (
-                      <div key={idx} className="px-6 py-4 hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                            {getActivityIcon(activity.type)}
+              {/* Recent Activity */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4 text-white">Recent Activity</h2>
+                <div className="space-y-2">
+                  {activities.length === 0 ? (
+                    <div className="text-center py-12 text-neutral-500">
+                      <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No recent activity</p>
+                    </div>
+                  ) : (
+                    activities.map((activity) => (
+                      <div
+                        key={activity.id}
+                        className="group p-4 rounded-xl bg-neutral-900/30 border border-white/10 hover:bg-neutral-900/50 hover:border-white/20 transition-all duration-300"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 flex-shrink-0">
+                            <Clock className="w-4 h-4" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white">{activity.description}</p>
-                            <p className="text-xs text-neutral-500">{getRelativeTime(activity.timestamp)}</p>
-                          </div>
-                          {activity.count > 0 && (
-                            <div className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-400">
-                              +{activity.count}
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="text-sm text-white font-medium">{activity.action}</p>
+                              <span className="text-xs text-neutral-500 whitespace-nowrap">{activity.timestamp}</span>
                             </div>
-                          )}
+                            {activity.details && (
+                              <p className="text-xs text-neutral-400 leading-relaxed">{activity.details}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
+                                {activity.count ?? 0} items
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="px-6 py-12 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-                      <Clock className="w-8 h-8 text-neutral-600" />
-                    </div>
-                    <p className="text-neutral-400 text-sm">No recent activity</p>
-                    <p className="text-neutral-600 text-xs mt-1">Activity will appear here as you use the platform</p>
-                  </div>
-                )}
+                    ))
+                  )}
+                </div>
               </div>
 
               <div className="rounded-2xl bg-neutral-900/30 border border-white/10 overflow-hidden">
@@ -1386,208 +1330,134 @@ export default function DashboardPage() {
           {activeSection === "targeting" && profile && (
             <div className="space-y-8">
               <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  <span className="text-purple-400">Business</span> Information
-                </h2>
-
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 space-y-6">
-                  {/* Company Details */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-purple-400 mb-3">Company Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-xs text-gray-400 uppercase mb-1">Business Name</h4>
-                        <p className="text-sm">{profile.business_name}</p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-xs text-gray-400 uppercase mb-1">Industry</h4>
-                        <p className="text-sm">{profile.industry}</p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-xs text-gray-400 uppercase mb-1">Website</h4>
-                        <a
-                          href={profile.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-cyan-400 hover:underline"
-                        >
-                          {profile.website}
-                        </a>
-                      </div>
-
-                      {profile.company_size && (
-                        <div>
-                          <h4 className="text-xs text-gray-400 uppercase mb-1">Company Size</h4>
-                          <p className="text-sm">{profile.company_size}</p>
-                        </div>
-                      )}
-
-                      {profile.year_founded && (
-                        <div>
-                          <h4 className="text-xs text-gray-400 uppercase mb-1">Year Founded</h4>
-                          <p className="text-sm">{profile.year_founded}</p>
-                        </div>
-                      )}
+                <h2 className="text-2xl font-semibold mb-6 text-white">Business Information</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Business Name</label>
+                      <p className="text-white">{profile.business_name || "Not set"}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Industry</label>
+                      <p className="text-white">{profile.industry || "Not set"}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Website</label>
+                      <p className="text-white">{profile.website || "Not set"}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Company Size</label>
+                      <p className="text-white">{profile.company_size ?? "Not set"}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Year Founded</label>
+                      <p className="text-white">{profile.year_founded ?? "Not set"}</p>
                     </div>
                   </div>
-
-                  {/* Contact Information */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-cyan-400 mb-3">Contact Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {profile.street && (
-                        <div>
-                          <h4 className="text-xs text-gray-400 uppercase mb-1">Address</h4>
-                          <p className="text-sm">
-                            {profile.street}, {profile.city}, {profile.state} {profile.zip}
-                          </p>
-                        </div>
-                      )}
-
-                      <div>
-                        <h4 className="text-xs text-gray-400 uppercase mb-1">Email</h4>
-                        <p className="text-sm">{profile.email}</p>
-                      </div>
-
-                      {profile.phone && (
-                        <div>
-                          <h4 className="text-xs text-gray-400 uppercase mb-1">Phone</h4>
-                          <p className="text-sm">{profile.phone}</p>
-                        </div>
-                      )}
-
-                      {profile.linkedin && (
-                        <div>
-                          <h4 className="text-xs text-gray-400 uppercase mb-1">LinkedIn</h4>
-                          <a
-                            href={profile.linkedin}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-cyan-400 hover:underline"
-                          >
-                            View Profile
-                          </a>
-                        </div>
-                      )}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Description</label>
+                      <p className="text-white">{profile.description || "Not set"}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Address</label>
+                      <p className="text-white">
+                        {profile.street ?? "Not set"}
+                        {profile.city && `, ${profile.city}`}
+                        {profile.state && `, ${profile.state}`}
+                        {profile.zip && ` ${profile.zip}`}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">Phone</label>
+                      <p className="text-white">{profile.phone ?? "Not set"}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-400 mb-2">LinkedIn</label>
+                      <p className="text-white">{profile.linkedin ?? "Not set"}</p>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Target Customer Profile */}
-                  {(profile.target_customer_type ||
-                    profile.target_industries ||
-                    profile.target_job_titles ||
-                    profile.target_locations) && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-indigo-400 mb-3">Target Customer Profile</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {profile.target_customer_type && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Customer Type</h4>
-                            <p className="text-sm">{profile.target_customer_type}</p>
-                          </div>
-                        )}
+              <div>
+                <h2 className="text-2xl font-semibold mb-6 text-white">Target Customer Profile</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Customer Type</label>
+                    <p className="text-white">{profile.target_customer_type ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Industries</label>
+                    <p className="text-white">{profile.target_industries ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Company Sizes</label>
+                    <p className="text-white">{profile.target_company_sizes ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Job Titles</label>
+                    <p className="text-white">{profile.target_job_titles ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Locations</label>
+                    <p className="text-white">{profile.target_locations ?? "Not set"}</p>
+                  </div>
+                </div>
+              </div>
 
-                        {profile.target_industries && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Industries</h4>
-                            <p className="text-sm">{profile.target_industries}</p>
-                          </div>
-                        )}
+              <div>
+                <h2 className="text-2xl font-semibold mb-6 text-white">Positioning & Messaging</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Services</label>
+                    <p className="text-white">{profile.services ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Unique Selling Points</label>
+                    <p className="text-white">{profile.unique_selling_points ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Customer Pain Points</label>
+                    <p className="text-white">{profile.customer_pain_points ?? "Not set"}</p>
+                  </div>
+                </div>
+              </div>
 
-                        {profile.target_company_sizes && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Company Sizes</h4>
-                            <p className="text-sm">{profile.target_company_sizes}</p>
-                          </div>
-                        )}
-
-                        {profile.target_job_titles && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Job Titles</h4>
-                            <p className="text-sm">{profile.target_job_titles}</p>
-                          </div>
-                        )}
-
-                        {profile.target_locations && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Target Locations</h4>
-                            <p className="text-sm">{profile.target_locations}</p>
-                          </div>
-                        )}
+              <div>
+                <h2 className="text-2xl font-semibold mb-6 text-white">Email Preferences</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Email Tone</label>
+                    <p className="text-white">{profile.email_tone ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Email Style</label>
+                    <p className="text-white">{profile.email_style ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-400 mb-2">Include in Emails</label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={profile.email_preferences?.include_case_studies ?? false}
+                          readOnly
+                          className="rounded"
+                        />
+                        <span className="text-white">Case Studies & Success Stories</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={profile.email_preferences?.include_pricing ?? false}
+                          readOnly
+                          className="rounded"
+                        />
+                        <span className="text-white">Pricing Information</span>
                       </div>
                     </div>
-                  )}
-
-                  {/* Value Proposition */}
-                  {(profile.services || profile.unique_selling_points || profile.customer_pain_points) && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-purple-400 mb-3">Value Proposition</h3>
-                      <div className="space-y-3">
-                        {profile.services && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Services Offered</h4>
-                            <p className="text-sm">{profile.services}</p>
-                          </div>
-                        )}
-
-                        {profile.unique_selling_points && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Unique Selling Points</h4>
-                            <p className="text-sm">{profile.unique_selling_points}</p>
-                          </div>
-                        )}
-
-                        {profile.customer_pain_points && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Customer Pain Points We Solve</h4>
-                            <p className="text-sm">{profile.customer_pain_points}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Email Preferences */}
-                  {(profile.email_tone || profile.email_style || profile.email_preferences) && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-cyan-400 mb-3">Email Outreach Preferences</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {profile.email_tone && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Email Tone</h4>
-                            <p className="text-sm capitalize">{profile.email_tone}</p>
-                          </div>
-                        )}
-
-                        {profile.email_style && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 uppercase mb-1">Email Style</h4>
-                            <p className="text-sm capitalize">{profile.email_style}</p>
-                          </div>
-                        )}
-
-                        {profile.email_preferences && (
-                          <div className="md:col-span-2">
-                            <h4 className="text-xs text-gray-400 uppercase mb-2">Include in Emails</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {profile.email_preferences.include_case_studies && (
-                                <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded text-xs">
-                                  Case Studies
-                                </span>
-                              )}
-                              {profile.email_preferences.include_pricing && (
-                                <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 rounded text-xs">
-                                  Pricing Information
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
