@@ -829,7 +829,75 @@ export default function DashboardPage() {
           {activeSection === "dashboard" && (
             <div className="space-y-8">
               <div>
-                <h2 className="text-lg font-semibold mb-4 text-white">Quick Stats</h2>
+                <h2 className="text-lg font-semibold mb-4 text-white">Business Snapshot</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
+                    <p className="text-xs text-neutral-500 mb-1">Industry</p>
+                    <p className="text-sm text-white">{profile?.industry ?? "Not set"}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
+                    <p className="text-xs text-neutral-500 mb-1">Services</p>
+                    <p className="text-sm text-white">{profile?.services ?? "Not set"}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
+                    <p className="text-xs text-neutral-500 mb-1">Target Company Size</p>
+                    <p className="text-sm text-white">
+                      {Array.isArray(profile?.target_company_sizes)
+                        ? profile.target_company_sizes.join(", ") || "Not set"
+                        : (profile?.target_company_sizes ?? "Not set")}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
+                    <p className="text-xs text-neutral-500 mb-1">Target Job Levels</p>
+                    <p className="text-sm text-white">
+                      {Array.isArray(profile?.target_job_titles)
+                        ? profile.target_job_titles.join(", ") || "Not set"
+                        : (profile?.target_job_titles ?? "Not set")}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
+                    <p className="text-xs text-neutral-500 mb-1">Target Locations</p>
+                    <p className="text-sm text-white">
+                      {Array.isArray(profile?.target_locations)
+                        ? profile.target_locations.join(", ") || "Not set"
+                        : (profile?.target_locations ?? "Not set")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold mb-4 text-white">AI Status</h2>
+                <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-cyan-400">
+                      <BrainCircuit className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {isAnalyzing || isDiscovering || isGenerating || isSending ? "Running" : "Ready"}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        {activities.length > 0 && activities[0]?.timestamp
+                          ? `Last run: ${activities[0].timestamp}`
+                          : "No runs yet"}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      isAnalyzing || isDiscovering || isGenerating || isSending
+                        ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400"
+                        : "bg-green-500/10 border border-green-500/20 text-green-400"
+                    }`}
+                  >
+                    {isAnalyzing || isDiscovering || isGenerating || isSending ? "In Progress" : "Idle"}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold mb-4 text-white">Performance Snapshot</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
