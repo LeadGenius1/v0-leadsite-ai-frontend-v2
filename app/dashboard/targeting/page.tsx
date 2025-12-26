@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Save, Target } from "lucide-react"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+import { apiGet, apiPost } from "@/lib/api"
 
 const COMPANY_SIZE_OPTIONS = [
   { value: "0-10", label: "0–10 employees" },
@@ -46,11 +45,38 @@ interface TargetingData {
   target_customer_type: string
 }
 
+interface ProfileResponse {
+  success: boolean
+  profile: {
+    business_name?: string
+    industry?: string
+    website?: string
+    owner_name?: string
+    email?: string
+    phone?: string
+    description?: string
+    address?: string
+    city?: string
+    state?: string
+    zip?: string
+    services?: string
+    unique_selling_points?: string
+    target_location?: string
+    target_customer_type?: string
+    target_industries?: string[] | string
+    target_company_sizes?: string[] | string
+    target_job_titles?: string[] | string
+    target_job_levels?: string[] | string
+  } | null
+}
+
 export default function TargetingPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+
+  const [fullProfile, setFullProfile] = useState<ProfileResponse["profile"]>(null)
 
   const [targeting, setTargeting] = useState<TargetingData>({
     target_industries: [],
@@ -68,45 +94,46 @@ export default function TargetingPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem("leadsite_token")
-        if (!token) {
-          window.location.href = "/login"
-          return
+        const data = await apiGet<ProfileResponse>("/api/profile")
+
+        if (data.profile) {
+          setFullProfile(data.profile)
+
+          const parseArray = (val: string[] | string | undefined): string[] => {
+            if (!val) return []
+            if (Array.isArray(val)) return val
+            if (typeof val === "string") {
+              return val
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            }
+            return []
+          }
+
+          const targetingData: TargetingData = {
+            target_industries: parseArray(data.profile.target_industries),
+            target_company_sizes: parseArray(data.profile.target_company_sizes),
+            target_job_titles: parseArray(data.profile.target_job_titles),
+            target_job_levels: parseArray(data.profile.target_job_levels),
+            target_location: data.profile.target_location || "",
+            target_customer_type: data.profile.target_customer_type || "",
+          }
+
+          setTargeting(targetingData)
+          setIndustriesInput(targetingData.target_industries.join(", "))
+          setJobTitlesInput(targetingData.target_job_titles.join(", "))
         }
-
-        const res = await fetch(`${API_BASE_URL}/api/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (res.status === 401) {
-          localStorage.clear()
-          window.location.href = "/login"
-          return
-        }
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch profile")
-        }
-
-        const data = await res.json()
-
-        // Map the response to targeting data
-        const targetingData: TargetingData = {
-          target_industries: data.targeting?.target_industries || [],
-          target_company_sizes: data.targeting?.target_company_sizes || [],
-          target_job_titles: data.targeting?.target_job_titles || [],
-          target_job_levels: data.targeting?.target_job_levels || [],
-          target_location: data.targeting?.target_location || "",
-          target_customer_type: data.targeting?.target_customer_type || "",
-        }
-
-        setTargeting(targetingData)
-        setIndustriesInput(targetingData.target_industries.join(", "))
-        setJobTitlesInput(targetingData.target_job_titles.join(", "))
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load targeting data")
+        if (err instanceof Error) {
+          if (err.message === "NO_TOKEN" || err.message === "UNAUTHORIZED") {
+            window.location.href = "/login"
+            return
+          }
+          setError(err.message)
+        } else {
+          setError("Failed to load targeting data")
+        }
       } finally {
         setLoading(false)
       }
@@ -121,15 +148,8 @@ export default function TargetingPage() {
     setSuccess("")
 
     try {
-      const token = localStorage.getItem("leadsite_token")
-      if (!token) {
-        window.location.href = "/login"
-        return
-      }
-
       // Parse comma-separated inputs into arrays
-      const targetingPayload = {
-        ...targeting,
+      const updatedTargeting = {
         target_industries: industriesInput
           .split(",")
           .map((s) => s.trim())
@@ -138,32 +158,31 @@ export default function TargetingPage() {
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
+        target_company_sizes: targeting.target_company_sizes,
+        target_job_levels: targeting.target_job_levels,
+        target_location: targeting.target_location,
+        target_customer_type: targeting.target_customer_type,
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/profile`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(targetingPayload),
-      })
-
-      if (res.status === 401) {
-        localStorage.clear()
-        window.location.href = "/login"
-        return
+      const payload = {
+        ...fullProfile,
+        ...updatedTargeting,
       }
 
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.message || "Failed to save targeting")
-      }
+      await apiPost("/api/profile", payload)
 
       setSuccess("Targeting preferences saved successfully!")
       setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save targeting")
+      if (err instanceof Error) {
+        if (err.message === "NO_TOKEN" || err.message === "UNAUTHORIZED") {
+          window.location.href = "/login"
+          return
+        }
+        setError(err.message)
+      } else {
+        setError("Failed to save targeting")
+      }
     } finally {
       setSaving(false)
     }
