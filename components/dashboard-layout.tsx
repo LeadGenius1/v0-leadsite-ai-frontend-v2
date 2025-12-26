@@ -6,7 +6,19 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, Mail, Settings, Sparkles, Menu, X, ChevronDown, LogOut, User } from "lucide-react"
+import {
+  LayoutDashboard,
+  Users,
+  Mail,
+  Settings,
+  Sparkles,
+  Menu,
+  X,
+  ChevronDown,
+  LogOut,
+  User,
+  Target,
+} from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +29,7 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Targeting", href: "/dashboard/targeting", icon: Target },
   { name: "Clients", href: "/dashboard/clients", icon: Users },
   { name: "Emails", href: "/dashboard/emails", icon: Mail },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -34,7 +47,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem("sessionToken")
+        const token = localStorage.getItem("leadsite_token")
         if (!token) return
 
         const res = await fetch("https://api.leadsite.ai/api/auth/me", {
