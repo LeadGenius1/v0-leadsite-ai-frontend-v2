@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import {
   LogOut,
   Mail,
@@ -20,6 +21,7 @@ import {
   Eye,
   MessageCircle,
   AlertCircle,
+  Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -525,7 +527,13 @@ export default function DashboardPage() {
             Campaigns
           </button>
 
-          {/* REMOVED Targeting nav item - handled on separate page */}
+          <Link
+            href="/dashboard/targeting"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 text-neutral-400 hover:text-white hover:bg-white/5"
+          >
+            <Target className="w-5 h-5" />
+            Targeting
+          </Link>
 
           <button
             onClick={() => setActiveSection("settings")}
@@ -848,10 +856,10 @@ export default function DashboardPage() {
                       className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between"
                     >
                       <div>
-                        <p className="text-sm font-medium text-white">{prospect.name}</p>
-                        <p className="text-xs text-neutral-500">{prospect.company}</p>
+                        <p className="text-sm font-medium text-white">{prospect.contact_name}</p>
+                        <p className="text-xs text-neutral-500">{prospect.company_name}</p>
                       </div>
-                      <span className="text-xs text-neutral-400">{prospect.email}</span>
+                      <span className="text-xs text-neutral-400">{prospect.contact_email}</span>
                     </div>
                   ))
                 )}
