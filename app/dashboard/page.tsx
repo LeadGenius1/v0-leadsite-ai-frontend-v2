@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   LogOut,
-  Target,
   Mail,
   Loader2,
   X,
@@ -19,101 +18,15 @@ import {
   TrendingUp,
   Users,
   Eye,
-  MousePointerClick,
   MessageCircle,
   AlertCircle,
-  ExternalLink,
 } from "lucide-react"
-import { Button } from "@/components/ui/button" // Assuming Button is in this path
+import { Button } from "@/components/ui/button"
 
-type TargetingVM = {
-  businessName: string | null
-  website: string | null
-  industry: string | null
-  location: string | null
-  idealCustomer: string | null
-  valueAngle: string | null
-  status: "not_analyzed" | "processing" | "ready"
-  updatedAt: string | null
-}
-
-function buildTargetingVM(profile: ProfileData | null, analysis?: any): TargetingVM {
-  const businessName = profile?.business_name ?? null
-
-  const website = profile?.website ?? null
-
-  const industry = analysis?.industry ?? analysis?.primaryIndustry ?? profile?.industry ?? null
-
-  const location =
-    profile?.city && profile?.state
-      ? `${profile.city}, ${profile.state}`
-      : profile?.target_locations
-        ? Array.isArray(profile.target_locations)
-          ? profile.target_locations[0]
-          : profile.target_locations
-        : null
-
-  const idealCustomer =
-    analysis?.idealCustomer ??
-    analysis?.targetAudience ??
-    (profile?.target_customer_type ? `${profile.target_customer_type} customers` : null)
-
-  const valueAngle =
-    analysis?.valueAngle ??
-    analysis?.primaryValueAngle ??
-    analysis?.positioning ??
-    profile?.unique_selling_points ??
-    null
-
-  const status: TargetingVM["status"] =
-    profile?.analysis_status === "processing"
-      ? "processing"
-      : industry || idealCustomer || valueAngle
-        ? "ready"
-        : "not_analyzed"
-
-  const updatedAt = analysis?.updatedAt ?? analysis?.updated_at ?? null
-
-  return { businessName, website, industry, location, idealCustomer, valueAngle, status, updatedAt }
-}
-
-function KeyRow({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null
-  return (
-    <div className="flex items-start justify-between gap-4 py-1">
-      <div className="text-xs text-white/60">{label}</div>
-      <div className="text-sm text-white text-right break-words max-w-[70%]">{value}</div>
-    </div>
-  )
-}
-
-function StatusPill({ status }: { status: "not_analyzed" | "processing" | "ready" }) {
-  const config = {
-    ready: { text: "Ready", bg: "bg-green-500/10", border: "border-green-500/20", color: "text-green-400" },
-    processing: {
-      text: "Processing",
-      bg: "bg-yellow-500/10",
-      border: "border-yellow-500/20",
-      color: "text-yellow-400",
-    },
-    not_analyzed: {
-      text: "Not analyzed",
-      bg: "bg-neutral-500/10",
-      border: "border-neutral-500/20",
-      color: "text-neutral-400",
-    },
-  }
-  const { text, bg, border, color } = config[status]
-  return (
-    <div className={`inline-flex items-center rounded-full border ${border} ${bg} px-2 py-1 text-xs ${color}`}>
-      {text}
-    </div>
-  )
-}
+// REMOVED TargetingVM type and buildTargetingVM function - not used in dashboard
+// REMOVED KeyRow and StatusPill components - not used in dashboard
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
-
-// All AI actions now route through backend API
 
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("leadsite_token")
@@ -148,7 +61,6 @@ interface ProfileData {
   customer_id: number
   name: string
   job_title: string
-  logo_base64?: string
   business_name: string
   industry: string
   website: string
@@ -158,30 +70,21 @@ interface ProfileData {
   zip: string
   email: string
   phone: string
-  linkedin?: string
-  twitter?: string
-  github?: string
+  logo_base64?: string
   trial_end_date?: string
-  analysis_status?: string // Added for analysis status
-  description?: string // Added for description
-
-  // Onboarding data fields for AI agent
+  analysis_status?: string
+  description?: string
   company_size?: string
   year_founded?: string
-  target_customer_type?: string
-  target_industries?: string
-  target_company_sizes?: string
-  target_job_titles?: string
-  target_locations?: string
-  services?: string
+  target_industries?: string[]
+  target_company_sizes?: string[]
+  target_job_titles?: string[]
+  target_locations?: string[]
   unique_selling_points?: string
-  customer_pain_points?: string
   email_tone?: string
   email_style?: string
-  email_preferences?: {
-    include_case_studies: boolean
-    include_pricing: boolean
-  }
+  email_preferences?: string[]
+  target_customer_type?: string
 }
 
 interface QuickStats {
@@ -195,13 +98,12 @@ interface QuickStats {
 }
 
 interface Activity {
-  id: string // Added id for unique key
-  type: "prospect_discovery" | "email_sent" | "email_opened" | "reply_received"
-  action: string // Changed from type to action to match update
-  count: number | null // Changed to allow null
-  timestamp: string
-  details?: string // Added for activity details
+  id: number // Changed from string to number
+  type: string // Changed from specific enum to string
+  title: string // Added title field
   description: string
+  timestamp: string
+  count?: number // Added count field
 }
 
 interface HotLead {
@@ -240,36 +142,49 @@ interface Prospect {
 }
 
 interface Schedule {
-  auto_discover_enabled: boolean
-  daily_prospect_limit: number
-  run_time: string
-  next_run?: string
-  last_run?: string
+  enabled: boolean // Renamed from auto_discover_enabled
+  dailyLimit: number // Renamed from daily_prospect_limit
+  startTime: string // Renamed from run_time
+  endTime: string // Added endTime
+  timezone: string // Added timezone
+  workDays: string[] // Added workDays
 }
 
-const getGreeting = () => {
-  const hour = new Date().getHours()
-  if (hour < 12) return "Good morning"
-  if (hour < 17) return "Good afternoon"
-  return "Good evening"
-}
+// const getGreeting = () => {
+//   const hour = new Date().getHours()
+//   if (hour < 12) return "Good morning"
+//   if (hour < 17) return "Good afternoon"
+//   return "Good evening"
+// }
 
-const getFirstName = (profile: ProfileData | null) => {
-  if (profile?.business_name) {
-    // Use first word of business name
-    return profile.business_name.split(" ")[0]
-  }
-  if (profile?.email) {
-    // Extract name before @ symbol
-    return profile.email.split("@")[0]
-  }
-  return "there"
-}
+// const getFirstName = (profile: ProfileData | null) => {
+//   if (profile?.business_name) {
+//     // Use first word of business name
+//     return profile.business_name.split(" ")[0]
+//   }
+//   if (profile?.email) {
+//     // Extract name before @ symbol
+//     return profile.email.split("@")[0]
+//   }
+//   return "there"
+// }
 
 export default function DashboardPage() {
   const router = useRouter()
+  const statsPollingRef = useRef<NodeJS.Timeout | null>(null)
+
+  const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [targetingVM, setTargetingVM] = useState<TargetingVM | null>(null) // Added for targeting view
+  const [trialDaysLeft, setTrialDaysLeft] = useState(0)
+  const [activeSection, setActiveSection] = useState("dashboard")
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
+
+  // REMOVED targetingVM state - not used in stabilized dashboard
+  // REMOVED isAnalyzing state - analysis removed from dashboard
+
+  const [isDiscovering, setIsDiscovering] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isSending, setIsSending] = useState(false)
 
   const [quickStats, setQuickStats] = useState<QuickStats>({
     totalProspects: 0,
@@ -282,57 +197,43 @@ export default function DashboardPage() {
   })
 
   const [activities, setActivities] = useState<Activity[]>([])
-  const [hotLeads, setHotLeads] = useState<HotLead[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [schedule, setSchedule] = useState<Schedule>({
-    auto_discover_enabled: false,
-    daily_prospect_limit: 50,
-    run_time: "23:00",
+    enabled: false,
+    dailyLimit: 50,
+    startTime: "09:00",
+    endTime: "17:00",
+    timezone: "America/New_York",
+    workDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
   })
 
-  const [activeSection, setActiveSection] = useState("dashboard")
-  const [loading, setLoading] = useState(true)
-  const [trialDaysLeft, setTrialDaysLeft] = useState(0)
-
-  // Action loading states
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isDiscovering, setIsDiscovering] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [isSending, setIsSending] = useState(false)
-  const [savingSchedule, setSavingSchedule] = useState(false)
-
-  // Modal states
-  const [showCreateCampaign, setShowCreateCampaign] = useState(false)
-  const [campaignName, setCampaignName] = useState("")
-  const [showProspects, setShowProspects] = useState(false)
-  const [showEmailStats, setShowEmailStats] = useState(false)
-
-  // Toast notification state
-  const [toast, setToast] = useState<{ type: "success" | "error" | "warning" | "info"; message: string } | null>(null)
-
-  const statsPollingRef = useRef<NodeJS.Timeout | null>(null)
-
-  const showToast = (type: "success" | "error" | "warning" | "info", message: string) => {
+  const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message })
-    setTimeout(() => setToast(null), 5000)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return "Good morning"
+    if (hour < 18) return "Good afternoon"
+    return "Good evening"
+  }
+
+  const getFirstName = (profile: ProfileData | null) => {
+    if (!profile) return "there"
+    const name = profile.name || profile.business_name || ""
+    return name.split(" ")[0] || "there"
   }
 
   useEffect(() => {
     const token = localStorage.getItem("leadsite_token")
-    // REMOVED DEBUG CONSOLE LOGS
-    // console.log("[DASHBOARD] Auth check - Token exists:", !!token)
-    // console.log("[DASHBOARD] Token value:", token ? `${token.substring(0, 20)}...` : "null")
 
     if (!token) {
-      // REMOVED DEBUG CONSOLE LOGS
-      // console.log("[DASHBOARD] No token found, redirecting to login")
       window.location.href = "/login"
       return
     }
 
-    // REMOVED DEBUG CONSOLE LOGS
-    // console.log("[DASHBOARD] Token valid, fetching dashboard data")
     fetchDashboard()
     fetchQuickStats()
     fetchActivities()
@@ -371,9 +272,10 @@ export default function DashboardPage() {
           zip: "",
           email: data.user.email,
           phone: "",
+          logo_base64: data.user.logo_base64, // Added logo_base64
           trial_end_date: data.user.trial_end_date,
           analysis_status: data.user.profile?.analysis_status,
-          description: data.user.profile?.description, // Added description
+          description: data.user.profile?.description,
           company_size: data.user.profile?.company_size,
           year_founded: data.user.profile?.year_founded,
           target_industries: data.user.profile?.target_industries,
@@ -384,9 +286,10 @@ export default function DashboardPage() {
           email_tone: data.user.profile?.email_tone,
           email_style: data.user.profile?.email_length,
           email_preferences: data.user.profile?.email_preferences,
+          target_customer_type: data.user.profile?.target_customer_type, // Added target_customer_type
         }
         setProfile(mappedProfile)
-        setTargetingVM(buildTargetingVM(mappedProfile, data.user.profile)) // Build targeting VM
+        // REMOVED buildTargetingVM call
 
         if (data.user.trial_end_date) {
           const endDate = new Date(data.user.trial_end_date)
@@ -409,12 +312,9 @@ export default function DashboardPage() {
       if (data.stats) {
         setQuickStats(data.stats)
       }
-    } catch (error: any) {
-      if (error.message?.includes("404") || error.message?.includes("Not Found")) {
-        // Use fallback data - endpoint doesn't exist yet
-        return
-      }
+    } catch (error) {
       console.error("Error fetching quick stats:", error)
+      // Keep existing values on error - never block rendering
     }
   }
 
@@ -424,13 +324,67 @@ export default function DashboardPage() {
       if (data.activities) {
         setActivities(data.activities)
       }
-    } catch (error: any) {
-      if (error.message?.includes("404") || error.message?.includes("Not Found")) {
-        // Use empty array fallback - endpoint doesn't exist yet
-        setActivities([])
-        return
-      }
+    } catch (error) {
       console.error("Error fetching activities:", error)
+      // Keep existing values on error - never block rendering
+    }
+  }
+
+  // REMOVED fetchAnalysis function - analysis not part of dashboard contract
+
+  useEffect(() => {
+    if (activeSection === "contact") {
+      fetchCampaigns()
+      fetchProspects()
+    } else if (activeSection === "settings") {
+      fetchSchedule()
+    }
+    // REMOVED targeting section handler - analysis handled on separate page
+  }, [activeSection])
+
+  // REMOVED handleAnalyzeBusiness function - analysis not triggered from dashboard
+
+  const handleDiscoverProspects = async () => {
+    try {
+      setIsDiscovering(true)
+      await apiCall("/api/discover-prospects", { method: "POST" })
+      showToast("success", "Prospect discovery started")
+      fetchQuickStats()
+      fetchActivities()
+    } catch (err: any) {
+      console.error(err)
+      showToast("error", err.message || "Failed to start discovery")
+    } finally {
+      setIsDiscovering(false)
+    }
+  }
+
+  const handleGenerateEmails = async () => {
+    try {
+      setIsGenerating(true)
+      await apiCall("/api/workflows/generate-emails", { method: "POST" })
+      showToast("success", "Email generation started")
+      fetchActivities()
+    } catch (err: any) {
+      console.error(err)
+      showToast("error", err.message || "Failed to generate emails")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleSendCampaign = async () => {
+    try {
+      setIsSending(true)
+      await apiCall("/api/workflows/send-campaign", { method: "POST" })
+      showToast("success", "Campaign sending started")
+      fetchQuickStats()
+      fetchActivities()
+    } catch (err: any) {
+      console.error(err)
+      showToast("error", err.message || "Failed to send campaign")
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -467,1218 +421,524 @@ export default function DashboardPage() {
     }
   }
 
-  // Fetch analysis data when activeSection changes to targeting
-  const fetchAnalysis = async () => {
-    try {
-      const data = await apiCall("/api/analysis")
-      setTargetingVM(buildTargetingVM(profile, data))
-    } catch (error) {
-      console.error("Error fetching analysis:", error)
-    }
-  }
-
-  useEffect(() => {
-    if (activeSection === "contact") {
-      fetchCampaigns()
-      fetchProspects()
-    } else if (activeSection === "settings") {
-      fetchSchedule()
-    } else if (activeSection === "targeting") {
-      fetchAnalysis()
-    }
-  }, [activeSection])
-
-  const handleAnalyzeBusiness = async () => {
-    try {
-      setIsAnalyzing(true)
-
-      const res = await fetch("/api/profile/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      })
-
-      if (!res.ok) {
-        // Try to parse error message from backend
-        let errorMessage = "Analyze request failed"
-        try {
-          const errorData = await res.json()
-          errorMessage = errorData.message || errorMessage
-        } catch (e) {
-          // Ignore if response is not JSON or empty
-        }
-        throw new Error(errorMessage)
-      }
-
-      // Assuming the backend returns a success confirmation, or perhaps some initial data
-      // const data = await res.json(); // Uncomment if backend returns data to be processed
-
-      showToast("success", "Business analysis started")
-      fetchQuickStats()
-      fetchActivities()
-      fetchAnalysis() // Fetch analysis data again to update status
-    } catch (err: any) {
-      console.error(err)
-      showToast("error", err.message || "Failed to start analysis")
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  const handleDiscoverProspects = async () => {
-    if (!profile) {
-      showToast("error", "Profile data not loaded. Please refresh the page.")
-      return
-    }
-
-    setIsDiscovering(true)
-    try {
-      const data = await apiCall("/api/discover-prospects", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "discover_prospects",
-          profile,
-        }),
-      })
-
-      showToast("success", `Found ${data.count || 0} prospects!`)
-      setIsDiscovering(false)
-      fetchQuickStats()
-      fetchActivities()
-    } catch (error: any) {
-      setIsDiscovering(false)
-      showToast("error", error.message || "Failed to discover prospects")
-    }
-  }
-
-  const handleGenerateEmails = async () => {
-    if (!profile) {
-      showToast("error", "Profile data not loaded. Please refresh the page.")
-      return
-    }
-
-    if (prospects.length === 0) {
-      showToast("warning", "No prospects selected for email generation.")
-      return
-    }
-
-    setIsGenerating(true)
-    try {
-      const data = await apiCall("/api/workflows/generate-emails", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "generate_emails",
-          profile,
-          campaignId: campaigns[0]?.id,
-          prospectIds: prospects.slice(0, 10).map((p) => p.id),
-        }),
-      })
-
-      showToast("success", `Generated ${data.count || 0} emails!`)
-      setIsGenerating(false)
-      fetchQuickStats()
-    } catch (error: any) {
-      setIsGenerating(false)
-      showToast("error", error.message || "Failed to generate emails")
-    }
-  }
-
-  const handleSendCampaign = async () => {
-    if (!profile) {
-      showToast("error", "Profile data not loaded. Please refresh the page.")
-      return
-    }
-
-    if (campaigns.length === 0) {
-      showToast("warning", "No campaign available to send.")
-      return
-    }
-
-    setIsSending(true)
-    try {
-      const response = await apiCall("/api/workflows/send-campaign", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "send_campaign",
-          profile,
-          campaignId: campaigns[0].id,
-        }),
-      })
-
-      showToast("success", "Campaign sent successfully!")
-      setIsSending(false)
-      fetchQuickStats()
-      fetchActivities()
-      fetchCampaigns()
-    } catch (error: any) {
-      setIsSending(false)
-      showToast("error", error.message || "Failed to send campaign")
-    }
-  }
-
-  const handleCreateCampaign = async () => {
-    if (!campaignName.trim()) {
-      showToast("warning", "Please enter a campaign name")
-      return
-    }
-
-    try {
-      const customerId = localStorage.getItem("customerId")
-      await apiCall("/api/campaigns", {
-        method: "POST",
-        body: JSON.stringify({ name: campaignName, business_id: profile?.id, customerId }),
-      })
-
-      showToast("success", "Campaign created successfully!")
-      setShowCreateCampaign(false)
-      setCampaignName("")
-      fetchCampaigns()
-    } catch (error: any) {
-      showToast("error", error.message || "Failed to create campaign")
-    }
-  }
-
-  const handleSaveSchedule = async () => {
-    setSavingSchedule(true)
+  const saveSchedule = async () => {
     try {
       await apiCall("/api/schedule", {
         method: "POST",
         body: JSON.stringify(schedule),
       })
-
-      showToast("success", "Schedule settings saved!")
-      setSavingSchedule(false)
-      fetchSchedule()
-    } catch (error: any) {
-      setSavingSchedule(false)
-      showToast("error", error.message || "Failed to save schedule")
-    }
-  }
-
-  const handleProcessReplies = async () => {
-    if (!profile) {
-      showToast("error", "Profile data not loaded. Please refresh the page.")
-      return
-    }
-
-    try {
-      const response = await apiCall("/api/workflows/process-replies", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "process_reply",
-          profile,
-        }),
-      })
-
-      showToast("success", "Processing replies...")
-      fetchActivities()
-      fetchQuickStats()
-    } catch (error: any) {
-      showToast("error", error.message || "Failed to process replies")
+      showToast("success", "Schedule saved successfully")
+    } catch (error) {
+      console.error("Error saving schedule:", error)
+      showToast("error", "Failed to save schedule")
     }
   }
 
   const handleLogout = () => {
     localStorage.clear()
-    router.push("/login")
-  }
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "prospect_discovery":
-        return <Target className="w-4 h-4 text-cyan-400" />
-      case "email_sent":
-        return <Send className="w-4 h-4 text-purple-400" />
-      case "email_opened":
-        return <Eye className="w-4 h-4 text-indigo-400" />
-      case "reply_received":
-        return <MessageCircle className="w-4 h-4 text-green-400" />
-      default:
-        return <Zap className="w-4 h-4 text-gray-400" />
-    }
-  }
-
-  const getRelativeTime = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays === 1) return "Yesterday"
-    return `${diffDays}d ago`
-  }
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "draft":
-        return "bg-gray-600 text-gray-100"
-      case "sending":
-        return "bg-yellow-600 text-yellow-100"
-      case "sent":
-        return "bg-green-600 text-green-100"
-      case "completed":
-        return "bg-blue-600 text-blue-100"
-      default:
-        return "bg-gray-600 text-gray-100"
-    }
-  }
-
-  const getQualityScoreColor = (score: number) => {
-    if (score >= 7) return "text-green-400"
-    if (score >= 4) return "text-yellow-400"
-    return "text-red-400"
+    window.location.href = "/login"
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0F1419] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
-          <p className="text-sm text-gray-400">Loading dashboard...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <p className="text-neutral-400 text-sm">Loading your dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden font-sans">
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        {/* Animated Stars */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div
-            className="stars absolute w-[1px] h-[1px] bg-transparent rounded-full opacity-50"
-            style={{
-              boxShadow:
-                "1744px 122px #FFF, 134px 1321px #FFF, 92px 859px #FFF, 500px 400px #FFF, 1200px 800px #FFF, 300px 200px #FFF, 800px 600px #FFF, 1500px 1000px #FFF",
-              animation: "animStar 50s linear infinite",
-            }}
-          />
-        </div>
-
-        {/* Subtle Grid */}
-        <div
-          className="absolute inset-0 opacity-[0.15]"
-          style={{
-            backgroundSize: "40px 40px",
-            backgroundImage:
-              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
-            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
-          }}
-        />
-
-        {/* Glow Blobs */}
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-900/20 rounded-full blur-[120px] animate-pulse" />
-        <div
-          className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[120px] animate-pulse"
-          style={{ animationDelay: "2s" }}
-        />
-      </div>
-
-      {/* Toast Notification */}
+    <div className="min-h-screen bg-black flex">
+      {/* Toast */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg backdrop-blur-md flex items-center gap-3 ${
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg border ${
             toast.type === "success"
-              ? "bg-green-500/10 border border-green-500/20 text-green-400"
-              : toast.type === "error"
-                ? "bg-red-500/10 border border-red-500/20 text-red-400"
-                : toast.type === "warning"
-                  ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400"
-                  : "bg-blue-500/10 border border-blue-500/20 text-blue-400"
-          }`}
+              ? "bg-green-500/10 border-green-500/20 text-green-400"
+              : "bg-red-500/10 border-red-500/20 text-red-400"
+          } flex items-center gap-2`}
         >
-          <AlertCircle className="w-5 h-5" />
+          {toast.type === "success" ? (
+            <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+              <span className="text-xs">✓</span>
+            </div>
+          ) : (
+            <AlertCircle className="w-5 h-5" />
+          )}
           <span className="text-sm">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      <div className="flex relative z-10">
-        <aside className="w-64 bg-black/50 backdrop-blur-md border-r border-white/5 flex flex-col">
-          {/* Logo */}
-          <div className="p-6 border-b border-white/5">
+      {/* Sidebar */}
+      <aside className="w-64 bg-black border-r border-white/5 flex flex-col">
+        {/* Logo */}
+        <div className="p-6 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center">
+              <span className="text-white font-bold text-lg">L</span>
+            </div>
+            <span className="text-lg font-semibold text-white tracking-tight">LeadSite.AI</span>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          <button
+            onClick={() => setActiveSection("dashboard")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+              activeSection === "dashboard"
+                ? "bg-white/10 text-white border border-white/10"
+                : "text-neutral-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            Dashboard
+          </button>
+
+          <button
+            onClick={() => setActiveSection("ai")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+              activeSection === "ai"
+                ? "bg-white/10 text-white border border-white/10"
+                : "text-neutral-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <BrainCircuit className="w-5 h-5" />
+            AI Actions
+          </button>
+
+          <button
+            onClick={() => setActiveSection("contact")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+              activeSection === "contact"
+                ? "bg-white/10 text-white border border-white/10"
+                : "text-neutral-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Mail className="w-5 h-5" />
+            Campaigns
+          </button>
+
+          {/* REMOVED Targeting nav item - handled on separate page */}
+
+          <button
+            onClick={() => setActiveSection("settings")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+              activeSection === "settings"
+                ? "bg-white/10 text-white border border-white/10"
+                : "text-neutral-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Settings className="w-5 h-5" />
+            Settings
+          </button>
+        </nav>
+
+        {/* User Profile */}
+        <div className="p-4 border-t border-white/5">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
+            {profile?.logo_base64 ? (
+              <img
+                src={profile.logo_base64 || "/placeholder.svg"}
+                alt="Logo"
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                {profile?.name?.charAt(0) || "U"}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{profile?.name}</p>
+              <p className="text-xs text-neutral-500 truncate">{profile?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 p-8 overflow-y-auto max-h-screen">
+        <div className="mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium tracking-wide mb-4">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+            </span>
+            DASHBOARD ACTIVE
+          </div>
+
+          <h1 className="text-3xl md:text-4xl font-medium tracking-tight bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent mb-2">
+            {getGreeting()}, {getFirstName(profile)}!
+          </h1>
+
+          <p className="text-neutral-400 text-sm font-light">Here's your AI-powered lead generation overview</p>
+        </div>
+
+        {trialDaysLeft > 0 && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-lg flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full" />
-              <span className="text-lg font-medium tracking-wider">LeadSite.AI</span>
+              <span className="text-2xl">🎉</span>
+              <div>
+                <p className="text-sm font-medium text-white">
+                  {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} left in your free trial
+                </p>
+                <p className="text-xs text-neutral-400">Unlock unlimited leads and emails</p>
+              </div>
             </div>
+            <Button
+              size="sm"
+              className="bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600"
+            >
+              Upgrade Now
+            </Button>
           </div>
+        )}
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
-            <button
-              onClick={() => setActiveSection("dashboard")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
-                activeSection === "dashboard"
-                  ? "bg-white/10 text-white border border-white/10"
-                  : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              Dashboard
-            </button>
+        {/* Dashboard Tab */}
+        {activeSection === "dashboard" && (
+          <div className="space-y-8">
+            {/* REMOVED Business Targeting card - targeting handled on separate page */}
 
-            <button
-              onClick={() => setActiveSection("targeting")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
-                activeSection === "targeting"
-                  ? "bg-white/10 text-white border border-white/10"
-                  : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Target className="w-5 h-5" />
-              Targeting
-            </button>
-
-            <button
-              onClick={() => setActiveSection("contact")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
-                activeSection === "contact"
-                  ? "bg-white/10 text-white border border-white/10"
-                  : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Mail className="w-5 h-5" />
-              Contact
-            </button>
-
-            <button
-              onClick={() => setActiveSection("settings")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
-                activeSection === "settings"
-                  ? "bg-white/10 text-white border border-white/10"
-                  : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Settings className="w-5 h-5" />
-              Settings
-            </button>
-          </nav>
-
-          {/* User Profile */}
-          <div className="p-4 border-t border-white/5">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
-              {profile?.logo_base64 ? (
-                <img
-                  src={profile.logo_base64 || "/placeholder.svg"}
-                  alt="Logo"
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                  {profile?.name?.charAt(0) || "U"}
+            {/* AI Status */}
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-white">AI Status</h2>
+              <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-cyan-400">
+                    <BrainCircuit className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      {isDiscovering || isGenerating || isSending ? "Running" : "Ready"}
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      {activities.length > 0 && activities[0]?.timestamp
+                        ? `Last run: ${activities[0].timestamp}`
+                        : "No runs yet"}
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{profile?.name}</p>
-                <p className="text-xs text-neutral-500 truncate">{profile?.email}</p>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    isDiscovering || isGenerating || isSending
+                      ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400"
+                      : "bg-green-500/10 border border-green-500/20 text-green-400"
+                  }`}
+                >
+                  {isDiscovering || isGenerating || isSending ? "In Progress" : "Idle"}
+                </span>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
-          </div>
-        </aside>
 
-        {/* Main Content */}
-        <div className="flex-1 p-8 overflow-y-auto max-h-screen">
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium tracking-wide mb-4">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
-              </span>
-              DASHBOARD ACTIVE
+            {/* Performance Snapshot / Quick Stats */}
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-white">Performance Snapshot</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-indigo-400">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <p className="text-3xl font-medium text-white mb-1">{quickStats.totalProspects ?? 0}</p>
+                    <p className="text-sm text-neutral-400 font-light">Total Prospects</p>
+                  </div>
+                </div>
+
+                <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-purple-400">
+                      <Send className="w-5 h-5" />
+                    </div>
+                    <p className="text-3xl font-medium text-white mb-1">{quickStats.emailsSent ?? 0}</p>
+                    <p className="text-sm text-neutral-400 font-light">Emails Sent</p>
+                  </div>
+                </div>
+
+                <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-cyan-400">
+                      <Eye className="w-5 h-5" />
+                    </div>
+                    <p className="text-3xl font-medium text-white mb-1">{quickStats.openRate ?? 0}%</p>
+                    <p className="text-sm text-neutral-400 font-light">Open Rate</p>
+                  </div>
+                </div>
+
+                <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-green-500/50 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-green-400">
+                      <MessageCircle className="w-5 h-5" />
+                    </div>
+                    <p className="text-3xl font-medium text-white mb-1">{quickStats.replies ?? 0}</p>
+                    <p className="text-sm text-neutral-400 font-light">Replies</p>
+                  </div>
+                </div>
+
+                <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-yellow-500/50 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-yellow-400">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <p className="text-3xl font-medium text-white mb-1">{quickStats.hotLeads ?? 0}</p>
+                    <p className="text-sm text-neutral-400 font-light">Hot Leads</p>
+                  </div>
+                </div>
+
+                <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-blue-500/50 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-blue-400">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <p className="text-3xl font-medium text-white mb-1">{quickStats.deliveryRate ?? 0}%</p>
+                    <p className="text-sm text-neutral-400 font-light">Delivery Rate</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-medium tracking-tight bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent mb-2">
-              {getGreeting()}, {getFirstName(profile)}!
-            </h1>
-
-            <p className="text-neutral-400 text-sm font-light">Here's your AI-powered lead generation overview</p>
-          </div>
-
-          {trialDaysLeft > 0 && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🎉</span>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} left in your free trial
-                  </p>
-                  <p className="text-xs text-neutral-400">Unlock unlimited leads and emails</p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600"
-              >
-                Upgrade Now
-              </Button>
-            </div>
-          )}
-
-          {/* Dashboard Tab */}
-          {activeSection === "dashboard" && (
-            <div className="space-y-8">
-              {/* CHANGE START */}
-              <div>
-                <div className="rounded-xl border border-white/10 bg-black/40 p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-white">Business Targeting</h2>
-                    <StatusPill status={buildTargetingVM(profile).status} />
-                  </div>
-
-                  {(() => {
-                    const targeting = buildTargetingVM(profile)
-                    const hasAnyData =
-                      targeting.businessName ||
-                      targeting.website ||
-                      targeting.industry ||
-                      targeting.location ||
-                      targeting.idealCustomer ||
-                      targeting.valueAngle
-
-                    return (
-                      <>
-                        <div className="space-y-1">
-                          <KeyRow label="Business" value={targeting.businessName} />
-                          {targeting.website && (
-                            <div className="flex items-start justify-between gap-4 py-1">
-                              <div className="text-xs text-white/60">Website</div>
-                              <a
-                                href={
-                                  targeting.website.startsWith("http")
-                                    ? targeting.website
-                                    : `https://${targeting.website}`
-                                }
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-cyan-400 hover:text-cyan-300 text-right break-words max-w-[70%] flex items-center gap-1"
-                              >
-                                {targeting.website.replace(/^https?:\/\//, "")}
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </div>
-                          )}
-                          <KeyRow label="Industry" value={targeting.industry} />
-                          <KeyRow label="Location" value={targeting.location} />
-                          <KeyRow label="Ideal Customer" value={targeting.idealCustomer} />
-                          <KeyRow label="Value Angle" value={targeting.valueAngle} />
-                          {targeting.updatedAt && (
-                            <KeyRow label="Updated" value={new Date(targeting.updatedAt).toLocaleDateString()} />
-                          )}
-                        </div>
-
-                        {targeting.status === "not_analyzed" && (
-                          <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/70">
-                            Run <span className="font-medium text-cyan-400">Analyze Business</span> to generate
-                            targeting and outreach personalization.
-                          </div>
-                        )}
-
-                        {targeting.status === "processing" && (
-                          <div className="mt-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 text-xs text-yellow-400 flex items-center gap-2">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Analysis in progress...
-                          </div>
-                        )}
-                      </>
-                    )
-                  })()}
-                </div>
-              </div>
-              {/* CHANGE END */}
-
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-white">AI Status</h2>
-                <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-cyan-400">
-                      <BrainCircuit className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {isAnalyzing || isDiscovering || isGenerating || isSending ? "Running" : "Ready"}
-                      </p>
-                      <p className="text-xs text-neutral-500">
-                        {activities.length > 0 && activities[0]?.timestamp
-                          ? `Last run: ${activities[0].timestamp}`
-                          : "No runs yet"}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      isAnalyzing || isDiscovering || isGenerating || isSending
-                        ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400"
-                        : "bg-green-500/10 border border-green-500/20 text-green-400"
-                    }`}
-                  >
-                    {isAnalyzing || isDiscovering || isGenerating || isSending ? "In Progress" : "Idle"}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-white">Performance Snapshot</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-indigo-400">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <p className="text-3xl font-medium text-white mb-1">{quickStats.totalProspects}</p>
-                      <p className="text-sm text-neutral-400 font-light">Total Prospects</p>
-                    </div>
-                  </div>
-
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-500 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-purple-400">
-                        <Send className="w-5 h-5" />
-                      </div>
-                      <p className="text-3xl font-medium text-white mb-1">{quickStats.emailsSent}</p>
-                      <p className="text-sm text-neutral-400 font-light">Emails Sent</p>
-                    </div>
-                  </div>
-
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-cyan-400">
-                        <Eye className="w-5 h-5" />
-                      </div>
-                      <p className="text-3xl font-medium text-white mb-1">{quickStats.openRate}%</p>
-                      <p className="text-sm text-neutral-400 font-light">Open Rate</p>
-                    </div>
-                  </div>
-
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-green-500/50 transition-all duration-500 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-green-400">
-                        <MessageCircle className="w-5 h-5" />
-                      </div>
-                      <p className="text-3xl font-medium text-white mb-1">{quickStats.replies}</p>
-                      <p className="text-sm text-neutral-400 font-light">Replies</p>
-                    </div>
-                  </div>
-
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-yellow-500/50 transition-all duration-500 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-yellow-400">
-                        <Zap className="w-5 h-5" />
-                      </div>
-                      <p className="text-3xl font-medium text-white mb-1">{quickStats.hotLeads}</p>
-                      <p className="text-sm text-neutral-400 font-light">Hot Leads</p>
-                    </div>
-                  </div>
-
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-blue-500/50 transition-all duration-500 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-blue-400">
-                        <TrendingUp className="w-5 h-5" />
-                      </div>
-                      <p className="text-3xl font-medium text-white mb-1">{quickStats.deliveryRate}%</p>
-                      <p className="text-sm text-neutral-400 font-light">Delivery Rate</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-white">AI-Powered Actions</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Analyze Business */}
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
-                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4 text-cyan-400 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-shadow">
-                        <BrainCircuit className="w-6 h-6" />
-                      </div>
-                      <h3 className="text-lg font-medium text-white mb-2">Analyze Business</h3>
-                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
-                        AI analyzes your website to understand your market and ideal customers
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
-                          AI-Powered
-                        </span>
-                      </div>
-                      <button
-                        onClick={handleAnalyzeBusiness}
-                        disabled={isAnalyzing}
-                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#22d3ee_50%,#000_100%)]" />
-                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
-                          {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                          {isAnalyzing ? "Analyzing..." : "Analyze"}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Discover Prospects */}
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4 text-purple-400 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-shadow">
-                        <Search className="w-6 h-6" />
-                      </div>
-                      <h3 className="text-lg font-medium text-white mb-2">Discover Prospects</h3>
-                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
-                        Find businesses matching your target customer profile
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
-                          Automated
-                        </span>
-                      </div>
-                      <button
-                        onClick={handleDiscoverProspects}
-                        disabled={isDiscovering}
-                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#a855f7_50%,#000_100%)]" />
-                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
-                          {isDiscovering ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                          {isDiscovering ? "Discovering..." : "Discover"}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Generate Emails */}
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 text-indigo-400 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-shadow">
-                        <Zap className="w-6 h-6" />
-                      </div>
-                      <h3 className="text-lg font-medium text-white mb-2">Generate Emails</h3>
-                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
-                        Create personalized outreach emails using AI
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
-                          Personalized
-                        </span>
-                      </div>
-                      <button
-                        onClick={handleGenerateEmails}
-                        disabled={isGenerating}
-                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#6366f1_50%,#000_100%)]" />
-                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
-                          {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                          {isGenerating ? "Generating..." : "Generate"}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Send Campaign */}
-                  <div className="group relative p-6 rounded-2xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 overflow-hidden cursor-pointer">
-                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative z-10">
-                      <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4 text-cyan-400 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-shadow">
-                        <Send className="w-6 h-6" />
-                      </div>
-                      <h3 className="text-lg font-medium text-white mb-2">Send Campaign</h3>
-                      <p className="text-sm text-neutral-400 font-light leading-relaxed mb-4">
-                        Launch your email campaign and track results
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
-                          Tracking
-                        </span>
-                      </div>
-                      <button
-                        onClick={handleSendCampaign}
-                        disabled={isSending}
-                        className="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#22d3ee_50%,#000_100%)]" />
-                        <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white backdrop-blur-3xl border border-white/10 group-hover:bg-neutral-900/80 transition-colors">
-                          {isSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                          {isSending ? "Sending..." : "Send"}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4 text-white">Recent Activity</h2>
-                <div className="space-y-2">
-                  {activities.length === 0 ? (
-                    <div className="text-center py-12 text-neutral-500">
-                      <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p className="text-sm">No recent activity</p>
-                    </div>
-                  ) : (
-                    activities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="group p-4 rounded-xl bg-neutral-900/30 border border-white/10 hover:bg-neutral-900/50 hover:border-white/20 transition-all duration-300"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 flex-shrink-0">
-                            <Clock className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="text-sm text-white font-medium">{activity.action}</p>
-                              <span className="text-xs text-neutral-500 whitespace-nowrap">{activity.timestamp}</span>
-                            </div>
-                            {activity.details && (
-                              <p className="text-xs text-neutral-400 leading-relaxed">{activity.details}</p>
-                            )}
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
-                                {activity.count ?? 0} items
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-neutral-900/30 border border-white/10 overflow-hidden">
-                <div className="relative px-6 py-4 border-b border-white/5">
-                  <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
-                  <h3 className="text-lg font-medium text-white">Hot Leads</h3>
-                  <p className="text-sm text-neutral-500">High-intent prospects ready for outreach</p>
-                </div>
-
-                {hotLeads.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {hotLeads.map((lead) => (
-                      <div key={lead.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-500 to-orange-500 flex items-center justify-center text-white text-sm font-medium">
-                            {lead.contact_name.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white">{lead.contact_name}</p>
-                            <p className="text-xs text-neutral-500">{lead.company_name}</p>
-                          </div>
-                          <div className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400">
-                            Score: {lead.fit_score}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+            {/* Recent Activity */}
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-white">Recent Activity</h2>
+              <div className="space-y-3">
+                {activities.length === 0 ? (
+                  <div className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 text-center">
+                    <p className="text-neutral-400 text-sm">No recent activity</p>
                   </div>
                 ) : (
-                  <div className="px-6 py-12 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-                      <Users className="w-8 h-8 text-neutral-600" />
-                    </div>
-                    <p className="text-neutral-400 text-sm">No hot leads yet</p>
-                    <p className="text-neutral-600 text-xs mt-1">Start discovering prospects to see hot leads here</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Actions Bar */}
-              <div className="rounded-2xl bg-neutral-900/30 border border-white/10 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <button
-                    onClick={() => {
-                      setActiveSection("contact")
-                      setShowCreateCampaign(true)
-                    }}
-                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create Campaign
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveSection("contact")
-                      setShowProspects(true)
-                    }}
-                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
-                  >
-                    <Users className="w-4 h-4" />
-                    View All Prospects
-                  </button>
-                  <button
-                    onClick={() => setShowEmailStats(true)}
-                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
-                  >
-                    <TrendingUp className="w-4 h-4" />
-                    Email Analytics
-                  </button>
-                  <button
-                    onClick={handleProcessReplies}
-                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Process Replies
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Targeting Section - Business Info & Customer Profile */}
-          {activeSection === "targeting" && targetingVM && (
-            <div className="space-y-8">
-              <h2 className="text-3xl font-bold mb-6 text-white">
-                Targeting Profile{" "}
-                <span className="text-neutral-400 text-lg font-medium">for {targetingVM.businessName}</span>
-              </h2>
-
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-white">Business Details</h3>
-                  <div className="space-y-3">
-                    <KeyRow label="Business Name" value={targetingVM.businessName} />
-                    <KeyRow label="Website" value={targetingVM.website} />
-                    <KeyRow label="Industry" value={targetingVM.industry} />
-                    <KeyRow label="Location" value={targetingVM.location} />
-                    <div className="flex items-start justify-between gap-4 py-1">
-                      <div className="text-xs text-white/60">Status</div>
-                      <StatusPill status={targetingVM.status} />
-                    </div>
-                    {targetingVM.updatedAt && (
-                      <div className="flex items-start justify-between gap-4 py-1">
-                        <div className="text-xs text-white/60">Last Updated</div>
-                        <div className="text-sm text-white text-right break-words max-w-[70%]">
-                          {new Date(targetingVM.updatedAt).toLocaleDateString()}
+                  activities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400">
+                          {activity.type === "prospect" && <Users className="w-5 h-5" />}
+                          {activity.type === "email" && <Mail className="w-5 h-5" />}
+                          {activity.type === "reply" && <MessageCircle className="w-5 h-5" />}
+                          {!["prospect", "email", "reply"].includes(activity.type) && <Clock className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">{activity.title}</p>
+                          <p className="text-xs text-neutral-500">{activity.description}</p>
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-white">Ideal Customer & Value</h3>
-                  <div className="space-y-3">
-                    <KeyRow label="Ideal Customer" value={targetingVM.idealCustomer} />
-                    <KeyRow label="Value Proposition" value={targetingVM.valueAngle} />
-                  </div>
-                </div>
+                      <div className="flex items-center gap-3">
+                        <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
+                          {activity.count ?? 0}
+                        </span>
+                        <span className="text-xs text-neutral-500">{activity.timestamp}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+            </div>
+          </div>
+        )}
 
-              <div className="flex justify-center">
+        {/* AI Actions Tab */}
+        {activeSection === "ai" && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-white">AI Actions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
-                  onClick={handleAnalyzeBusiness}
-                  disabled={isAnalyzing || targetingVM.status === "processing"}
-                  className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-1/3"
+                  onClick={handleDiscoverProspects}
+                  disabled={isDiscovering}
+                  className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 hover:border-indigo-500/50 transition-all duration-300 text-left disabled:opacity-50"
                 >
-                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#22d3ee_50%,#000_100%)]" />
-                  <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-lg font-medium text-white backdrop-blur-3xl border border-white/10 disabled:bg-gray-800 transition-colors">
-                    {isAnalyzing || targetingVM.status === "processing" ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                        {targetingVM.status === "processing" ? "Processing..." : "Analyzing..."}
-                      </>
-                    ) : (
-                      "Analyze Business"
-                    )}
-                  </span>
+                  <div className="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 text-indigo-400">
+                    {isDiscovering ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
+                  </div>
+                  <h3 className="text-white font-medium mb-1">Discover Prospects</h3>
+                  <p className="text-xs text-neutral-500">Find new leads matching your criteria</p>
+                </button>
+
+                <button
+                  onClick={handleGenerateEmails}
+                  disabled={isGenerating}
+                  className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 hover:border-purple-500/50 transition-all duration-300 text-left disabled:opacity-50"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4 text-purple-400">
+                    {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Mail className="w-6 h-6" />}
+                  </div>
+                  <h3 className="text-white font-medium mb-1">Generate Emails</h3>
+                  <p className="text-xs text-neutral-500">Create personalized outreach emails</p>
+                </button>
+
+                <button
+                  onClick={handleSendCampaign}
+                  disabled={isSending}
+                  className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 hover:border-cyan-500/50 transition-all duration-300 text-left disabled:opacity-50"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4 text-cyan-400">
+                    {isSending ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
+                  </div>
+                  <h3 className="text-white font-medium mb-1">Send Campaign</h3>
+                  <p className="text-xs text-neutral-500">Launch your email campaign</p>
                 </button>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Contact Section - Campaigns & Prospects */}
-          {activeSection === "contact" && (
-            <div className="space-y-8">
-              {/* Campaigns Table */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">
-                    <span className="text-purple-400">Campaigns</span>
-                  </h2>
+        {/* Campaigns Tab */}
+        {activeSection === "contact" && (
+          <div className="space-y-8">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white">Campaigns</h2>
+                <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Campaign
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {campaigns.length === 0 ? (
+                  <div className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 text-center">
+                    <p className="text-neutral-400 text-sm">No campaigns yet</p>
+                  </div>
+                ) : (
+                  campaigns.map((campaign) => (
+                    <div
+                      key={campaign.id}
+                      className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-white">{campaign.name}</p>
+                        <p className="text-xs text-neutral-500">{campaign.status}</p>
+                      </div>
+                      <span className="text-xs text-neutral-400">{campaign.sent ?? 0} sent</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-white">Prospects</h2>
+              <div className="space-y-3">
+                {prospects.length === 0 ? (
+                  <div className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 text-center">
+                    <p className="text-neutral-400 text-sm">No prospects yet</p>
+                  </div>
+                ) : (
+                  prospects.slice(0, 5).map((prospect) => (
+                    <div
+                      key={prospect.id}
+                      className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-white">{prospect.name}</p>
+                        <p className="text-xs text-neutral-500">{prospect.company}</p>
+                      </div>
+                      <span className="text-xs text-neutral-400">{prospect.email}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeSection === "settings" && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-lg font-semibold mb-4 text-white">Automation Schedule</h2>
+              <div className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-white">Enable Automation</p>
+                    <p className="text-xs text-neutral-500">Automatically send emails on schedule</p>
+                  </div>
                   <button
-                    onClick={() => setShowCreateCampaign(true)}
-                    className="flex items-center gap-2 py-2 px-4 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg text-sm hover:from-cyan-600 hover:to-purple-600 transition-all"
+                    onClick={() => setSchedule({ ...schedule, enabled: !schedule.enabled })}
+                    className={`w-12 h-6 rounded-full transition-all ${
+                      schedule.enabled ? "bg-indigo-500" : "bg-neutral-700"
+                    }`}
                   >
-                    <Plus className="w-4 h-4" />
-                    Create Campaign
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                        schedule.enabled ? "translate-x-6" : "translate-x-0.5"
+                      }`}
+                    />
                   </button>
                 </div>
 
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden">
-                  {campaigns.length > 0 ? (
-                    <table className="w-full">
-                      <thead className="bg-white/5 border-b border-white/10">
-                        <tr>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Name</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Status</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Total</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Sent</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Opens</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Replies</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Created</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {campaigns.map((campaign) => (
-                          <tr key={campaign.id} className="border-b border-white/5 hover:bg-white/5">
-                            <td className="py-3 px-4 text-sm">{campaign.name}</td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-1 rounded text-xs ${getStatusBadgeColor(campaign.status)}`}>
-                                {campaign.status}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-sm">{campaign.total_emails}</td>
-                            <td className="py-3 px-4 text-sm">{campaign.sent_count}</td>
-                            <td className="py-3 px-4 text-sm">{campaign.open_count}</td>
-                            <td className="py-3 px-4 text-sm">{campaign.reply_count}</td>
-                            <td className="py-3 px-4 text-xs text-gray-400">
-                              {new Date(campaign.created_at).toLocaleDateString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="text-center py-12 text-gray-400">
-                      <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No campaigns yet</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Prospects Table */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  <span className="text-cyan-400">Prospects</span>
-                </h2>
-
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden">
-                  {prospects.length > 0 ? (
-                    <table className="w-full">
-                      <thead className="bg-white/5 border-b border-white/10">
-                        <tr>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Name</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Company</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Email</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Phone</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Industry</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Quality</th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-400">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {prospects.slice(0, 20).map((prospect) => (
-                          <tr key={prospect.id} className="border-b border-white/5 hover:bg-white/5">
-                            <td className="py-3 px-4 text-sm">{prospect.contact_name}</td>
-                            <td className="py-3 px-4 text-sm">{prospect.company_name}</td>
-                            <td className="py-3 px-4 text-xs text-gray-400">{prospect.contact_email}</td>
-                            <td className="py-3 px-4 text-xs text-gray-400">{prospect.phone || "—"}</td>
-                            <td className="py-3 px-4 text-xs">{prospect.industry}</td>
-                            <td className="py-3 px-4">
-                              <span className={`text-sm font-semibold ${getQualityScoreColor(prospect.quality_score)}`}>
-                                {prospect.quality_score}/10
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-xs text-gray-400">{prospect.enrichment_status}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="text-center py-12 text-gray-400">
-                      <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No prospects yet</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Settings Section - Schedule Settings */}
-          {activeSection === "settings" && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  <span className="text-indigo-400">Automation</span> Schedule
-                </h2>
-
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 space-y-6">
-                  {/* Auto Discover Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium">Enable automatic daily prospect discovery</h3>
-                      <p className="text-xs text-gray-400 mt-1">Automatically discover new prospects every night</p>
-                    </div>
-                    <button
-                      onClick={() =>
-                        setSchedule({ ...schedule, auto_discover_enabled: !schedule.auto_discover_enabled })
-                      }
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        schedule.auto_discover_enabled ? "bg-cyan-500" : "bg-gray-600"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          schedule.auto_discover_enabled ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Daily Limit */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Daily prospect limit</label>
+                    <label className="block text-xs text-neutral-400 mb-2">Daily Limit</label>
                     <input
                       type="number"
-                      value={schedule.daily_prospect_limit}
-                      onChange={(e) =>
-                        setSchedule({ ...schedule, daily_prospect_limit: Number.parseInt(e.target.value) || 50 })
-                      }
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-cyan-500/50"
-                      min="1"
-                      max="500"
+                      value={schedule.dailyLimit}
+                      onChange={(e) => setSchedule({ ...schedule, dailyLimit: Number.parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500"
                     />
                   </div>
-
-                  {/* Run Time */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">Run at (24h format)</label>
+                    <label className="block text-xs text-neutral-400 mb-2">Timezone</label>
+                    <select
+                      value={schedule.timezone}
+                      onChange={(e) => setSchedule({ ...schedule, timezone: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="America/New_York">Eastern Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-neutral-400 mb-2">Start Time</label>
                     <input
                       type="time"
-                      value={schedule.run_time}
-                      onChange={(e) => setSchedule({ ...schedule, run_time: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-cyan-500/50"
+                      value={schedule.startTime}
+                      onChange={(e) => setSchedule({ ...schedule, startTime: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500"
                     />
                   </div>
-
-                  {/* Info Box */}
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                    <p className="text-xs text-blue-200">
-                      The system will automatically discover new prospects every night at the specified time, respecting
-                      your daily limit. You'll receive an email summary of the results.
-                    </p>
+                  <div>
+                    <label className="block text-xs text-neutral-400 mb-2">End Time</label>
+                    <input
+                      type="time"
+                      value={schedule.endTime}
+                      onChange={(e) => setSchedule({ ...schedule, endTime: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500"
+                    />
                   </div>
-
-                  {/* Save Button */}
-                  <button
-                    onClick={handleSaveSchedule}
-                    disabled={savingSchedule}
-                    className="w-full py-2 px-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white text-sm rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {savingSchedule ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Settings"
-                    )}
-                  </button>
                 </div>
+
+                <Button onClick={saveSchedule} className="w-full bg-indigo-500 hover:bg-indigo-600">
+                  Save Schedule
+                </Button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-
-      {/* Create Campaign Modal */}
-      {showCreateCampaign && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F1419] border border-white/20 rounded-lg w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Create New Campaign</h3>
-              <button onClick={() => setShowCreateCampaign(false)} className="text-gray-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Campaign Name</label>
-                <input
-                  type="text"
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                  placeholder="Q1 2025 Outreach"
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-cyan-500/50"
-                />
-              </div>
-
-              <button
-                onClick={handleCreateCampaign}
-                className="w-full py-2 px-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white text-sm rounded-lg font-medium transition-all"
-              >
-                Create Campaign
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Email Stats Modal */}
-      {showEmailStats && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F1419] border border-white/20 rounded-lg w-full max-w-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Email Performance</h3>
-              <button onClick={() => setShowEmailStats(false)} className="text-gray-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Eye className="w-4 h-4 text-indigo-400" />
-                  <span className="text-sm font-medium">Open Rate</span>
-                </div>
-                <span className="text-2xl font-bold">{quickStats.openRate}%</span>
-              </div>
-              <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-medium">Replies</span>
-                </div>
-                <span className="text-2xl font-bold">{quickStats.replies}</span>
-              </div>
-              <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <MousePointerClick className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm font-medium">Delivery Rate</span>
-                </div>
-                <span className="text-2xl font-bold">{quickStats.deliveryRate}%</span>
-              </div>
-              <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-red-400" />
-                  <span className="text-sm font-medium">Bounce Rate</span>
-                </div>
-                <span className="text-2xl font-bold">{quickStats.bounceRate}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
