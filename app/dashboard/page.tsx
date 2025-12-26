@@ -22,8 +22,94 @@ import {
   MousePointerClick,
   MessageCircle,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button" // Assuming Button is in this path
+
+type TargetingVM = {
+  businessName: string | null
+  website: string | null
+  industry: string | null
+  location: string | null
+  idealCustomer: string | null
+  valueAngle: string | null
+  status: "not_analyzed" | "processing" | "ready"
+  updatedAt: string | null
+}
+
+function buildTargetingVM(profile: ProfileData | null, analysis?: any): TargetingVM {
+  const businessName = profile?.business_name ?? null
+
+  const website = profile?.website ?? null
+
+  const industry = analysis?.industry ?? analysis?.primaryIndustry ?? profile?.industry ?? null
+
+  const location =
+    profile?.city && profile?.state
+      ? `${profile.city}, ${profile.state}`
+      : profile?.target_locations
+        ? Array.isArray(profile.target_locations)
+          ? profile.target_locations[0]
+          : profile.target_locations
+        : null
+
+  const idealCustomer =
+    analysis?.idealCustomer ??
+    analysis?.targetAudience ??
+    (profile?.target_customer_type ? `${profile.target_customer_type} customers` : null)
+
+  const valueAngle =
+    analysis?.valueAngle ??
+    analysis?.primaryValueAngle ??
+    analysis?.positioning ??
+    profile?.unique_selling_points ??
+    null
+
+  const status: TargetingVM["status"] =
+    profile?.analysis_status === "processing"
+      ? "processing"
+      : industry || idealCustomer || valueAngle
+        ? "ready"
+        : "not_analyzed"
+
+  const updatedAt = analysis?.updatedAt ?? analysis?.updated_at ?? null
+
+  return { businessName, website, industry, location, idealCustomer, valueAngle, status, updatedAt }
+}
+
+function KeyRow({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null
+  return (
+    <div className="flex items-start justify-between gap-4 py-1">
+      <div className="text-xs text-white/60">{label}</div>
+      <div className="text-sm text-white text-right break-words max-w-[70%]">{value}</div>
+    </div>
+  )
+}
+
+function StatusPill({ status }: { status: "not_analyzed" | "processing" | "ready" }) {
+  const config = {
+    ready: { text: "Ready", bg: "bg-green-500/10", border: "border-green-500/20", color: "text-green-400" },
+    processing: {
+      text: "Processing",
+      bg: "bg-yellow-500/10",
+      border: "border-yellow-500/20",
+      color: "text-yellow-400",
+    },
+    not_analyzed: {
+      text: "Not analyzed",
+      bg: "bg-neutral-500/10",
+      border: "border-neutral-500/20",
+      color: "text-neutral-400",
+    },
+  }
+  const { text, bg, border, color } = config[status]
+  return (
+    <div className={`inline-flex items-center rounded-full border ${border} ${bg} px-2 py-1 text-xs ${color}`}>
+      {text}
+    </div>
+  )
+}
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
@@ -183,6 +269,7 @@ const getFirstName = (profile: ProfileData | null) => {
 export default function DashboardPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [targetingVM, setTargetingVM] = useState<TargetingVM | null>(null) // Added for targeting view
 
   const [quickStats, setQuickStats] = useState<QuickStats>({
     totalProspects: 0,
@@ -299,6 +386,7 @@ export default function DashboardPage() {
           email_preferences: data.user.profile?.email_preferences,
         }
         setProfile(mappedProfile)
+        setTargetingVM(buildTargetingVM(mappedProfile, data.user.profile)) // Build targeting VM
 
         if (data.user.trial_end_date) {
           const endDate = new Date(data.user.trial_end_date)
@@ -379,12 +467,24 @@ export default function DashboardPage() {
     }
   }
 
+  // Fetch analysis data when activeSection changes to targeting
+  const fetchAnalysis = async () => {
+    try {
+      const data = await apiCall("/api/analysis")
+      setTargetingVM(buildTargetingVM(profile, data))
+    } catch (error) {
+      console.error("Error fetching analysis:", error)
+    }
+  }
+
   useEffect(() => {
     if (activeSection === "contact") {
       fetchCampaigns()
       fetchProspects()
     } else if (activeSection === "settings") {
       fetchSchedule()
+    } else if (activeSection === "targeting") {
+      fetchAnalysis()
     }
   }, [activeSection])
 
@@ -418,6 +518,7 @@ export default function DashboardPage() {
       showToast("success", "Business analysis started")
       fetchQuickStats()
       fetchActivities()
+      fetchAnalysis() // Fetch analysis data again to update status
     } catch (err: any) {
       console.error(err)
       showToast("error", err.message || "Failed to start analysis")
@@ -828,43 +929,74 @@ export default function DashboardPage() {
           {/* Dashboard Tab */}
           {activeSection === "dashboard" && (
             <div className="space-y-8">
+              {/* CHANGE START */}
               <div>
-                <h2 className="text-lg font-semibold mb-4 text-white">Business Snapshot</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
-                    <p className="text-xs text-neutral-500 mb-1">Industry</p>
-                    <p className="text-sm text-white">{profile?.industry ?? "Not set"}</p>
+                <div className="rounded-xl border border-white/10 bg-black/40 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-white">Business Targeting</h2>
+                    <StatusPill status={buildTargetingVM(profile).status} />
                   </div>
-                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
-                    <p className="text-xs text-neutral-500 mb-1">Services</p>
-                    <p className="text-sm text-white">{profile?.services ?? "Not set"}</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
-                    <p className="text-xs text-neutral-500 mb-1">Target Company Size</p>
-                    <p className="text-sm text-white">
-                      {Array.isArray(profile?.target_company_sizes)
-                        ? profile.target_company_sizes.join(", ") || "Not set"
-                        : (profile?.target_company_sizes ?? "Not set")}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
-                    <p className="text-xs text-neutral-500 mb-1">Target Job Levels</p>
-                    <p className="text-sm text-white">
-                      {Array.isArray(profile?.target_job_titles)
-                        ? profile.target_job_titles.join(", ") || "Not set"
-                        : (profile?.target_job_titles ?? "Not set")}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-neutral-900/30 border border-white/10">
-                    <p className="text-xs text-neutral-500 mb-1">Target Locations</p>
-                    <p className="text-sm text-white">
-                      {Array.isArray(profile?.target_locations)
-                        ? profile.target_locations.join(", ") || "Not set"
-                        : (profile?.target_locations ?? "Not set")}
-                    </p>
-                  </div>
+
+                  {(() => {
+                    const targeting = buildTargetingVM(profile)
+                    const hasAnyData =
+                      targeting.businessName ||
+                      targeting.website ||
+                      targeting.industry ||
+                      targeting.location ||
+                      targeting.idealCustomer ||
+                      targeting.valueAngle
+
+                    return (
+                      <>
+                        <div className="space-y-1">
+                          <KeyRow label="Business" value={targeting.businessName} />
+                          {targeting.website && (
+                            <div className="flex items-start justify-between gap-4 py-1">
+                              <div className="text-xs text-white/60">Website</div>
+                              <a
+                                href={
+                                  targeting.website.startsWith("http")
+                                    ? targeting.website
+                                    : `https://${targeting.website}`
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-cyan-400 hover:text-cyan-300 text-right break-words max-w-[70%] flex items-center gap-1"
+                              >
+                                {targeting.website.replace(/^https?:\/\//, "")}
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                          <KeyRow label="Industry" value={targeting.industry} />
+                          <KeyRow label="Location" value={targeting.location} />
+                          <KeyRow label="Ideal Customer" value={targeting.idealCustomer} />
+                          <KeyRow label="Value Angle" value={targeting.valueAngle} />
+                          {targeting.updatedAt && (
+                            <KeyRow label="Updated" value={new Date(targeting.updatedAt).toLocaleDateString()} />
+                          )}
+                        </div>
+
+                        {targeting.status === "not_analyzed" && (
+                          <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/70">
+                            Run <span className="font-medium text-cyan-400">Analyze Business</span> to generate
+                            targeting and outreach personalization.
+                          </div>
+                        )}
+
+                        {targeting.status === "processing" && (
+                          <div className="mt-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 text-xs text-yellow-400 flex items-center gap-2">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Analysis in progress...
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
+              {/* CHANGE END */}
 
               <div>
                 <h2 className="text-lg font-semibold mb-4 text-white">AI Status</h2>
@@ -1211,6 +1343,68 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Targeting Section - Business Info & Customer Profile */}
+          {activeSection === "targeting" && targetingVM && (
+            <div className="space-y-8">
+              <h2 className="text-3xl font-bold mb-6 text-white">
+                Targeting Profile{" "}
+                <span className="text-neutral-400 text-lg font-medium">for {targetingVM.businessName}</span>
+              </h2>
+
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-white">Business Details</h3>
+                  <div className="space-y-3">
+                    <KeyRow label="Business Name" value={targetingVM.businessName} />
+                    <KeyRow label="Website" value={targetingVM.website} />
+                    <KeyRow label="Industry" value={targetingVM.industry} />
+                    <KeyRow label="Location" value={targetingVM.location} />
+                    <div className="flex items-start justify-between gap-4 py-1">
+                      <div className="text-xs text-white/60">Status</div>
+                      <StatusPill status={targetingVM.status} />
+                    </div>
+                    {targetingVM.updatedAt && (
+                      <div className="flex items-start justify-between gap-4 py-1">
+                        <div className="text-xs text-white/60">Last Updated</div>
+                        <div className="text-sm text-white text-right break-words max-w-[70%]">
+                          {new Date(targetingVM.updatedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-white">Ideal Customer & Value</h3>
+                  <div className="space-y-3">
+                    <KeyRow label="Ideal Customer" value={targetingVM.idealCustomer} />
+                    <KeyRow label="Value Proposition" value={targetingVM.valueAngle} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  onClick={handleAnalyzeBusiness}
+                  disabled={isAnalyzing || targetingVM.status === "processing"}
+                  className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-1/3"
+                >
+                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#000_0%,#22d3ee_50%,#000_100%)]" />
+                  <span className="inline-flex h-full w-full items-center justify-center rounded-full bg-black px-6 text-lg font-medium text-white backdrop-blur-3xl border border-white/10 disabled:bg-gray-800 transition-colors">
+                    {isAnalyzing || targetingVM.status === "processing" ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        {targetingVM.status === "processing" ? "Processing..." : "Analyzing..."}
+                      </>
+                    ) : (
+                      "Analyze Business"
+                    )}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Contact Section - Campaigns & Prospects */}
           {activeSection === "contact" && (
             <div className="space-y-8">
@@ -1401,143 +1595,6 @@ export default function DashboardPage() {
                       "Save Settings"
                     )}
                   </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Targeting Section - Business Information */}
-          {activeSection === "targeting" && profile && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-semibold mb-6 text-white">Business Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Business Name</label>
-                      <p className="text-white">{profile.business_name || "Not set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Industry</label>
-                      <p className="text-white">{profile.industry || "Not set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Website</label>
-                      <p className="text-white">{profile.website || "Not set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Company Size</label>
-                      <p className="text-white">{profile.company_size ?? "Not set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Year Founded</label>
-                      <p className="text-white">{profile.year_founded ?? "Not set"}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Description</label>
-                      <p className="text-white">{profile.description || "Not set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Address</label>
-                      <p className="text-white">
-                        {profile.street ?? "Not set"}
-                        {profile.city && `, ${profile.city}`}
-                        {profile.state && `, ${profile.state}`}
-                        {profile.zip && ` ${profile.zip}`}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">Phone</label>
-                      <p className="text-white">{profile.phone ?? "Not set"}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-400 mb-2">LinkedIn</label>
-                      <p className="text-white">{profile.linkedin ?? "Not set"}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-semibold mb-6 text-white">Target Customer Profile</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Customer Type</label>
-                    <p className="text-white">{profile.target_customer_type ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Industries</label>
-                    <p className="text-white">{profile.target_industries ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Company Sizes</label>
-                    <p className="text-white">{profile.target_company_sizes ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Job Titles</label>
-                    <p className="text-white">{profile.target_job_titles ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Target Locations</label>
-                    <p className="text-white">{profile.target_locations ?? "Not set"}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-semibold mb-6 text-white">Positioning & Messaging</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Services</label>
-                    <p className="text-white">{profile.services ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Unique Selling Points</label>
-                    <p className="text-white">{profile.unique_selling_points ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Customer Pain Points</label>
-                    <p className="text-white">{profile.customer_pain_points ?? "Not set"}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-semibold mb-6 text-white">Email Preferences</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Email Tone</label>
-                    <p className="text-white">{profile.email_tone ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Email Style</label>
-                    <p className="text-white">{profile.email_style ?? "Not set"}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-2">Include in Emails</label>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={profile.email_preferences?.include_case_studies ?? false}
-                          readOnly
-                          className="rounded"
-                        />
-                        <span className="text-white">Case Studies & Success Stories</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={profile.email_preferences?.include_pricing ?? false}
-                          readOnly
-                          className="rounded"
-                        />
-                        <span className="text-white">Pricing Information</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
