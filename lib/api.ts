@@ -418,13 +418,17 @@ export async function apiGet<T>(path: string): Promise<T> {
 
 /**
  * Add apiPost helper for standardized auth POST requests
+ * Always send at least {} as body to prevent "Body cannot be empty" error
  */
-export async function apiPost<T>(path: string, body: object): Promise<T> {
+export async function apiPost<T>(path: string, body?: Record<string, unknown> | null): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("leadsite_token") : null
 
   if (!token) {
     throw new Error("NO_TOKEN")
   }
+
+  // Always send at least {} as the JSON body
+  const jsonBody = body !== undefined && body !== null ? JSON.stringify(body) : "{}"
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -433,18 +437,30 @@ export async function apiPost<T>(path: string, body: object): Promise<T> {
       Authorization: `Bearer ${token}`,
     },
     credentials: "include",
-    body: JSON.stringify(body),
+    body: jsonBody,
   })
+
+  // Parse response text first
+  const text = await res.text()
+  let data: T = {} as T
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      data = { raw: text } as T
+    }
+  }
 
   if (res.status === 401) {
     throw new Error("UNAUTHORIZED")
   }
 
   if (!res.ok) {
-    throw new Error(`API_ERROR_${res.status}`)
+    const errorData = data as { error?: string; message?: string }
+    throw new Error(errorData?.error || errorData?.message || `API_ERROR_${res.status}`)
   }
 
-  return res.json()
+  return data
 }
 
 export default api
