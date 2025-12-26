@@ -21,7 +21,7 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("https://api.leadsite.ai/api/auth/signup", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

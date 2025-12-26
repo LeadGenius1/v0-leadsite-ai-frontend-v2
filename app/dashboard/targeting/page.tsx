@@ -146,8 +146,8 @@ export default function TargetingPage() {
           .filter(Boolean),
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/profile/targeting`, {
-        method: "PATCH",
+      const res = await fetch(`${API_BASE_URL}/api/profile`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,

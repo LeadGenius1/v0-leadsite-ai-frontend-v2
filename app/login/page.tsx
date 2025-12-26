@@ -40,7 +40,6 @@ export default function LoginPage() {
 
       if (data.token) {
         localStorage.setItem("leadsite_token", data.token)
-        localStorage.setItem("sessionToken", data.token)
       } else {
         throw new Error("No token received from server")
       }

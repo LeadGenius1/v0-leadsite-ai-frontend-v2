@@ -154,7 +154,7 @@ export function Pricing() {
       }
 
       // Store session data
-      localStorage.setItem("sessionToken", data.sessionToken)
+      localStorage.setItem("leadsite_token", data.token)
       if (data.customerId) {
         localStorage.setItem("customerId", data.customerId)
       }
