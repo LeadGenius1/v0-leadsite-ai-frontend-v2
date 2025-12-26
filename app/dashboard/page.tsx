@@ -24,9 +24,7 @@ import {
   Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-// REMOVED TargetingVM type and buildTargetingVM function - not used in dashboard
-// REMOVED KeyRow and StatusPill components - not used in dashboard
+import { apiGet, apiPost } from "@/lib/api"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
@@ -152,25 +150,6 @@ interface Schedule {
   workDays: string[] // Added workDays
 }
 
-// const getGreeting = () => {
-//   const hour = new Date().getHours()
-//   if (hour < 12) return "Good morning"
-//   if (hour < 17) return "Good afternoon"
-//   return "Good evening"
-// }
-
-// const getFirstName = (profile: ProfileData | null) => {
-//   if (profile?.business_name) {
-//     // Use first word of business name
-//     return profile.business_name.split(" ")[0]
-//   }
-//   if (profile?.email) {
-//     // Extract name before @ symbol
-//     return profile.email.split("@")[0]
-//   }
-//   return "there"
-// }
-
 export default function DashboardPage() {
   const router = useRouter()
   const statsPollingRef = useRef<NodeJS.Timeout | null>(null)
@@ -181,12 +160,14 @@ export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState("dashboard")
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
 
-  // REMOVED targetingVM state - not used in stabilized dashboard
-  // REMOVED isAnalyzing state - analysis removed from dashboard
-
   const [isDiscovering, setIsDiscovering] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSending, setIsSending] = useState(false)
+
+  const [usage, setUsage] = useState<{
+    plan: string
+    leads: { used: number; limit: number; remaining: number }
+  } | null>(null)
 
   const [quickStats, setQuickStats] = useState<QuickStats>({
     totalProspects: 0,
@@ -240,7 +221,6 @@ export default function DashboardPage() {
     fetchQuickStats()
     fetchActivities()
 
-    // Poll stats every 30 seconds
     statsPollingRef.current = setInterval(fetchQuickStats, 30000)
 
     return () => {
@@ -254,6 +234,26 @@ export default function DashboardPage() {
       return () => clearInterval(interval)
     }
   }, [activeSection])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadUsage = async () => {
+      try {
+        const data = await apiGet<{ usage: typeof usage }>("/api/usage")
+        if (!mounted) return
+        setUsage(data.usage)
+      } catch (err) {
+        console.error("Failed to load usage", err)
+      }
+    }
+
+    loadUsage()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const fetchDashboard = async () => {
     try {
@@ -291,7 +291,6 @@ export default function DashboardPage() {
           target_customer_type: data.user.profile?.target_customer_type, // Added target_customer_type
         }
         setProfile(mappedProfile)
-        // REMOVED buildTargetingVM call
 
         if (data.user.trial_end_date) {
           const endDate = new Date(data.user.trial_end_date)
@@ -332,29 +331,30 @@ export default function DashboardPage() {
     }
   }
 
-  // REMOVED fetchAnalysis function - analysis not part of dashboard contract
-
-  useEffect(() => {
-    if (activeSection === "contact") {
-      fetchCampaigns()
-      fetchProspects()
-    } else if (activeSection === "settings") {
-      fetchSchedule()
-    }
-    // REMOVED targeting section handler - analysis handled on separate page
-  }, [activeSection])
-
-  // REMOVED handleAnalyzeBusiness function - analysis not triggered from dashboard
-
   const handleDiscoverProspects = async () => {
+    setIsDiscovering(true)
+
     try {
-      setIsDiscovering(true)
-      await apiCall("/api/discover-prospects", { method: "POST" })
-      showToast("success", "Prospect discovery started")
+      const remaining = usage?.leads?.remaining ?? 50
+
+      const plan = usage?.plan ?? "free"
+      const perRunCapByPlan: Record<string, number> = {
+        free: 50,
+        starter: 500,
+        ramp: 1000,
+        accelerate: 2000,
+      }
+
+      const perRunCap = perRunCapByPlan[plan] ?? 50
+      const limit = Math.max(1, Math.min(remaining, perRunCap))
+
+      await apiPost("/api/discover-prospects", { limit })
+
+      showToast("success", `Prospect discovery started for up to ${limit} leads`)
       fetchQuickStats()
       fetchActivities()
     } catch (err: any) {
-      console.error(err)
+      console.error("Discover prospects error:", err)
       showToast("error", err.message || "Failed to start discovery")
     } finally {
       setIsDiscovering(false)
@@ -618,8 +618,6 @@ export default function DashboardPage() {
         {/* Dashboard Tab */}
         {activeSection === "dashboard" && (
           <div className="space-y-8">
-            {/* REMOVED Business Targeting card - targeting handled on separate page */}
-
             {/* AI Status */}
             <div>
               <h2 className="text-lg font-semibold mb-4 text-white">AI Status</h2>
@@ -778,7 +776,11 @@ export default function DashboardPage() {
                     {isDiscovering ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
                   </div>
                   <h3 className="text-white font-medium mb-1">Discover Prospects</h3>
-                  <p className="text-xs text-neutral-500">Find new leads matching your criteria</p>
+                  <p className="text-xs text-neutral-500">
+                    {usage
+                      ? `Up to ${usage.leads.remaining} prospects remaining this month`
+                      : "Find new leads matching your criteria"}
+                  </p>
                 </button>
 
                 <button
