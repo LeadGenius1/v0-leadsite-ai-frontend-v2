@@ -14,26 +14,20 @@ import { Loader2, Save, Target } from "lucide-react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
 
-// Company size options matching Instantly.ai API
 const COMPANY_SIZE_OPTIONS = [
-  { value: "1-10", label: "1-10 employees" },
-  { value: "11-50", label: "11-50 employees" },
-  { value: "51-200", label: "51-200 employees" },
-  { value: "201-500", label: "201-500 employees" },
-  { value: "501-1000", label: "501-1,000 employees" },
-  { value: "1001-5000", label: "1,001-5,000 employees" },
-  { value: "5001-10000", label: "5,001-10,000 employees" },
-  { value: "10001+", label: "10,001+ employees" },
+  { value: "0-10", label: "0–10 employees" },
+  { value: "10-50", label: "10–50 employees" },
+  { value: "50-200", label: "50–200 employees" },
+  { value: "200-1000", label: "200–1,000 employees" },
+  { value: "1000+", label: "1,000+ employees" },
 ]
 
-// Job level options matching Instantly.ai API
 const JOB_LEVEL_OPTIONS = [
-  { value: "C-Level", label: "C-Level (CEO, CFO, CTO, etc.)" },
-  { value: "VP", label: "VP (Vice President)" },
-  { value: "Director", label: "Director" },
-  { value: "Manager", label: "Manager" },
-  { value: "Senior", label: "Senior" },
-  { value: "Entry", label: "Entry Level" },
+  { value: "Owner", label: "Owner" },
+  { value: "C-Level", label: "C-Level" },
+  { value: "VP-Level", label: "VP-Level" },
+  { value: "Director-Level", label: "Director-Level" },
+  { value: "Manager-Level", label: "Manager-Level" },
 ]
 
 // Customer type options
