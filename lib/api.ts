@@ -389,4 +389,62 @@ export const api = {
   },
 }
 
+/**
+ * Add apiGet helper for standardized auth requests
+ */
+export async function apiGet<T>(path: string): Promise<T> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("leadsite_token") : null
+
+  if (!token) {
+    throw new Error("NO_TOKEN")
+  }
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+  })
+
+  if (res.status === 401) {
+    throw new Error("UNAUTHORIZED")
+  }
+
+  if (!res.ok) {
+    throw new Error(`API_ERROR_${res.status}`)
+  }
+
+  return res.json()
+}
+
+/**
+ * Add apiPost helper for standardized auth POST requests
+ */
+export async function apiPost<T>(path: string, body: object): Promise<T> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("leadsite_token") : null
+
+  if (!token) {
+    throw new Error("NO_TOKEN")
+  }
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    credentials: "include",
+    body: JSON.stringify(body),
+  })
+
+  if (res.status === 401) {
+    throw new Error("UNAUTHORIZED")
+  }
+
+  if (!res.ok) {
+    throw new Error(`API_ERROR_${res.status}`)
+  }
+
+  return res.json()
+}
+
 export default api

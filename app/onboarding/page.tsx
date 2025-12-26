@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Building2, Globe, Target, Sparkles, ArrowRight, ArrowLeft, Check, Loader2, Mail, Users } from "lucide-react"
 
@@ -12,32 +12,66 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isChecking, setIsChecking] = useState(true)
 
   const [formData, setFormData] = useState({
-    // Step 1: Business Basics
     business_name: "",
-    industry: "", // Now free text instead of dropdown
+    industry: "",
     website: "",
-
-    // Step 2: Owner & Contact
     owner_name: "",
     email: "",
     phone: "",
     description: "",
-
-    // Step 3: Location & Address
     address: "",
     city: "",
     state: "",
     zip: "",
     target_location: "United States",
-
-    // Step 4: Target Audience (updated fields)
     target_company_size: [] as string[],
     target_job_levels: [] as string[],
     services: "",
     unique_selling_points: "",
   })
+
+  useEffect(() => {
+    const checkExistingProfile = async () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("leadsite_token") : null
+
+      if (!token) {
+        router.push("/login")
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "include",
+        })
+
+        if (response.status === 401) {
+          localStorage.removeItem("leadsite_token")
+          localStorage.removeItem("userId")
+          router.push("/login")
+          return
+        }
+
+        const data = await response.json()
+
+        if (data.success === true && data.profile && data.profile.business_name) {
+          window.location.href = "/dashboard"
+          return
+        }
+
+        setIsChecking(false)
+      } catch (err) {
+        setIsChecking(false)
+      }
+    }
+
+    checkExistingProfile()
+  }, [router])
 
   const companySizeOptions = [
     "0 - 25",
@@ -106,7 +140,6 @@ export default function OnboardingPage() {
       setCurrentStep(currentStep + 1)
       setError(null)
     } else {
-      // Step 4: Now submit all data in one POST request
       handleSubmit()
     }
   }
@@ -125,41 +158,30 @@ export default function OnboardingPage() {
     try {
       const token = localStorage.getItem("leadsite_token")
 
-      console.log("[v0] Submitting profile data:", formData)
-      console.log("[v0] Token:", token ? "exists" : "missing")
-
       if (!token) {
-        console.error("[v0] No token found, redirecting to login")
         router.push("/login")
         return
       }
 
-      const response = await fetch("https://api.leadsite.ai/api/profile", {
+      const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          // Step 1 data
           business_name: formData.business_name,
           industry: formData.industry,
           website: formData.website,
-
-          // Step 2 data
           owner_name: formData.owner_name,
           email: formData.email,
           phone: formData.phone,
           description: formData.description,
-
-          // Step 3 data
           address: formData.address,
           city: formData.city,
           state: formData.state,
           zip: formData.zip,
           target_location: formData.target_location,
-
-          // Step 4 data
           target_company_size: formData.target_company_size,
           target_job_levels: formData.target_job_levels,
           services: formData.services,
@@ -167,24 +189,16 @@ export default function OnboardingPage() {
         }),
       })
 
-      console.log("[v0] Response status:", response.status)
-
       if (!response.ok) {
         const errorData = await response.json()
-        console.error("[v0] Profile save error:", errorData)
         throw new Error(errorData.error || "Failed to save profile")
       }
 
-      const successData = await response.json()
-      console.log("[v0] Profile saved successfully:", successData)
-
       setIsAnalyzing(true)
       setTimeout(() => {
-        console.log("[v0] Redirecting to dashboard")
         window.location.href = "/dashboard"
       }, 1500)
     } catch (err: any) {
-      console.error("[v0] Onboarding submission error:", err)
       setError(err.message || "Failed to complete setup. Please try again.")
       setIsLoading(false)
     }
@@ -197,10 +211,38 @@ export default function OnboardingPage() {
     { num: 4, label: "Audience" },
   ]
 
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-black text-white font-['Inter'] relative overflow-hidden flex items-center justify-center">
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <div className="absolute inset-0 opacity-30">
+            {[...Array(50)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 bg-white rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animation: `twinkle ${2 + Math.random() * 3}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-900/20 rounded-full blur-[150px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-900/15 rounded-full blur-[150px]" />
+        </div>
+
+        <div className="relative z-10 text-center">
+          <Loader2 className="w-12 h-12 text-indigo-400 animate-spin mx-auto mb-4" />
+          <p className="text-neutral-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (isAnalyzing) {
     return (
       <div className="min-h-screen bg-black text-white font-['Inter'] relative overflow-hidden flex items-center justify-center">
-        {/* Space Background */}
         <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 opacity-30">
             {[...Array(50)].map((_, i) => (
@@ -261,7 +303,6 @@ export default function OnboardingPage() {
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-2xl">
-          {/* Logo */}
           <div className="flex items-center justify-center gap-3 mb-8">
             <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full" />
             <span className="text-xl font-medium tracking-wide">LeadSite.AI</span>
@@ -298,7 +339,6 @@ export default function OnboardingPage() {
           </div>
 
           <div className="bg-neutral-900/40 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
-            {/* Step 1: Business Basics */}
             {currentStep === 1 && (
               <>
                 <div className="text-center mb-8">
@@ -370,7 +410,6 @@ export default function OnboardingPage() {
               </>
             )}
 
-            {/* Step 2: Owner & Contact */}
             {currentStep === 2 && (
               <>
                 <div className="text-center mb-8">
@@ -448,7 +487,6 @@ export default function OnboardingPage() {
               </>
             )}
 
-            {/* Step 3: Location & Address */}
             {currentStep === 3 && (
               <>
                 <div className="text-center mb-8">
@@ -680,7 +718,6 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Navigation */}
             <div className="mt-8 flex justify-between items-center">
               {currentStep > 1 ? (
                 <button

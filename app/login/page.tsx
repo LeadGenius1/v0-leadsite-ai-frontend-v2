@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
 
@@ -48,25 +49,31 @@ export default function LoginPage() {
         localStorage.setItem("userId", data.user.id.toString())
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      setIsLoading(false)
+      setIsRedirecting(true)
 
       try {
+        const token = localStorage.getItem("leadsite_token")
         const profileResponse = await fetch(`${API_BASE_URL}/api/profile`, {
           headers: {
-            Authorization: `Bearer ${data.token}`,
+            Authorization: `Bearer ${token}`,
           },
           credentials: "include",
         })
 
-        if (!profileResponse.ok && profileResponse.status === 404) {
-          window.location.href = "/onboarding"
+        if (profileResponse.status === 401) {
+          localStorage.removeItem("leadsite_token")
+          localStorage.removeItem("userId")
+          router.push("/login")
+          return
+        }
+
+        const profileData = await profileResponse.json()
+
+        if (profileData.success === true && profileData.profile !== null) {
+          window.location.href = "/dashboard"
         } else {
-          const profileData = await profileResponse.json()
-          if (!profileData.website_url || profileData.website_url === "") {
-            window.location.href = "/onboarding"
-          } else {
-            window.location.href = "/dashboard"
-          }
+          window.location.href = "/onboarding"
         }
       } catch (profileError) {
         window.location.href = "/onboarding"
@@ -77,9 +84,36 @@ export default function LoginPage() {
       } else {
         setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
       }
-    } finally {
       setIsLoading(false)
+      setIsRedirecting(false)
     }
+  }
+
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col justify-center items-center">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+          <span className="text-2xl font-bold text-white">LeadSite.AI</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <svg
+            className="animate-spin h-5 w-5 text-indigo-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <span className="text-white">Checking your account...</span>
+        </div>
+      </div>
+    )
   }
 
   return (
