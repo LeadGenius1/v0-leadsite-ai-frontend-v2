@@ -129,16 +129,13 @@ interface Campaign {
 }
 
 interface Prospect {
-  id: string
-  contact_name: string
+  id: number
   company_name: string
   contact_email: string
-  phone: string
   industry: string
-  location: string
-  quality_score: number
-  enrichment_status: "pending" | "enriched" | "failed"
-  created_at: string
+  fit_score: number
+  contact_name?: string
+  created_at?: string
 }
 
 interface Schedule {
@@ -335,8 +332,14 @@ export default function DashboardPage() {
     setIsDiscovering(true)
 
     try {
-      const remaining = usage?.leads?.remaining ?? 50
+      // Get profile data for required fields
+      if (!profile) {
+        showToast("error", "Please complete your business profile first")
+        setIsDiscovering(false)
+        return
+      }
 
+      const remaining = usage?.leads?.remaining ?? 50
       const plan = usage?.plan ?? "free"
       const perRunCapByPlan: Record<string, number> = {
         free: 50,
@@ -344,13 +347,25 @@ export default function DashboardPage() {
         ramp: 1000,
         accelerate: 2000,
       }
-
       const perRunCap = perRunCapByPlan[plan] ?? 50
       const limit = Math.max(1, Math.min(remaining, perRunCap))
 
-      await apiPost("/api/discover-prospects", { limit })
+      // Send required fields to backend API
+      const response = await apiPost("/api/discover-prospects", {
+        business_id: String(profile.id),
+        industry: profile.industry || "",
+        target_location: profile.target_locations?.[0] || profile.city || "",
+        limit,
+      })
 
-      showToast("success", `Prospect discovery started for up to ${limit} leads`)
+      // Handle response with prospects data
+      if (response.prospects && Array.isArray(response.prospects)) {
+        setProspects(response.prospects)
+        showToast("success", `Found ${response.prospects.length} prospects`)
+      } else {
+        showToast("success", `Prospect discovery started for up to ${limit} leads`)
+      }
+
       fetchQuickStats()
       fetchActivities()
     } catch (err: any) {
@@ -837,7 +852,7 @@ export default function DashboardPage() {
                         <p className="text-sm font-medium text-white">{campaign.name}</p>
                         <p className="text-xs text-neutral-500">{campaign.status}</p>
                       </div>
-                      <span className="text-xs text-neutral-400">{campaign.sent ?? 0} sent</span>
+                      <span className="text-xs text-neutral-400">{campaign.sent_count ?? 0} sent</span>
                     </div>
                   ))
                 )}
@@ -849,21 +864,51 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {prospects.length === 0 ? (
                   <div className="p-6 rounded-xl bg-neutral-900/30 border border-white/10 text-center">
-                    <p className="text-neutral-400 text-sm">No prospects yet</p>
+                    <p className="text-neutral-400 text-sm">
+                      No prospects yet. Click "Discover Prospects" to find leads.
+                    </p>
                   </div>
                 ) : (
-                  prospects.slice(0, 5).map((prospect) => (
-                    <div
-                      key={prospect.id}
-                      className="p-4 rounded-xl bg-neutral-900/30 border border-white/10 flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-white">{prospect.contact_name}</p>
-                        <p className="text-xs text-neutral-500">{prospect.company_name}</p>
-                      </div>
-                      <span className="text-xs text-neutral-400">{prospect.contact_email}</span>
-                    </div>
-                  ))
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          <th className="text-left text-xs font-medium text-neutral-400 py-3 px-4">Company</th>
+                          <th className="text-left text-xs font-medium text-neutral-400 py-3 px-4">Email</th>
+                          <th className="text-left text-xs font-medium text-neutral-400 py-3 px-4">Industry</th>
+                          <th className="text-left text-xs font-medium text-neutral-400 py-3 px-4">Fit Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {prospects.slice(0, 10).map((prospect) => (
+                          <tr key={prospect.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="py-3 px-4">
+                              <span className="text-sm font-medium text-white">{prospect.company_name}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-sm text-neutral-400">{prospect.contact_email}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-sm text-neutral-400">{prospect.industry || "—"}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`text-sm font-medium ${
+                                  (prospect.fit_score ?? 0) >= 80
+                                    ? "text-green-400"
+                                    : (prospect.fit_score ?? 0) >= 60
+                                      ? "text-yellow-400"
+                                      : "text-neutral-400"
+                                }`}
+                              >
+                                {prospect.fit_score ?? 0}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </div>

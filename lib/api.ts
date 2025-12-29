@@ -130,21 +130,6 @@ export interface Business {
 }
 
 /**
- * n8n Workflow Types
- */
-export interface N8nWorkflow {
-  name: string
-  status: "active" | "inactive"
-  lastRun: string
-  nextRun?: string
-}
-
-export interface N8nStatusResponse {
-  status: "connected" | "disconnected"
-  workflows: N8nWorkflow[]
-}
-
-/**
  * API Methods
  */
 export const api = {
@@ -257,13 +242,6 @@ export const api = {
     return apiFetch(`/api/prospects?business_id=${businessId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-  },
-
-  /**
-   * Get n8n status
-   */
-  getN8nStatus: async (): Promise<N8nStatusResponse> => {
-    return apiFetch("/api/n8n/status")
   },
 
   /**
