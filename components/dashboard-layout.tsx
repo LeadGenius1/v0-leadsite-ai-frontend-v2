@@ -50,7 +50,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         const token = localStorage.getItem("leadsite_token")
         if (!token) return
 
-        const res = await fetch("https://api.leadsite.ai/api/auth/me", {
+        const res = await fetch("https://backend-production-2987.up.railway.app/api/auth/me", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

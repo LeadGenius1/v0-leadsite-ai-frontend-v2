@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Zap, Building2, Target, FileText, LogOut } from "lucide-react"
 
-const API_URL = "https://api.leadsite.ai"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
 
 const INDUSTRIES = [
   "Marketing",

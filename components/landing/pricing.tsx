@@ -6,7 +6,7 @@ import { Check, Clock } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
 
 const FeatureItem = ({
   available,

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react"
 import Link from "next/link"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")

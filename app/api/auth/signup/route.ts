@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward to backend API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"}/auth/signup`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
+    const response = await fetch(`${backendUrl}/auth/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

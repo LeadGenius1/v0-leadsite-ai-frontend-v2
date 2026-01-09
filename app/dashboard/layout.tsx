@@ -6,7 +6,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
 
 export default function DashboardLayout({
   children,

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
 
 export async function GET(request: NextRequest) {
   try {

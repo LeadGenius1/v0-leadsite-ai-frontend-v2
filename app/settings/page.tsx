@@ -83,7 +83,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="apiUrl">API Endpoint</Label>
-              <Input id="apiUrl" defaultValue="https://api.leadsite.ai" readOnly className="font-mono text-sm" />
+              <Input id="apiUrl" defaultValue="https://backend-production-2987.up.railway.app" readOnly className="font-mono text-sm" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="apiKey">API Key</Label>

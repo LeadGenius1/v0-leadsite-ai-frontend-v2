@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Call backend API to reset users with ADMIN_SECRET from server env
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/reset-users`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
+    const response = await fetch(`${backendUrl}/api/admin/reset-users`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

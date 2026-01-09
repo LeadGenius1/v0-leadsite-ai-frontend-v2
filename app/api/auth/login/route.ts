@@ -10,7 +10,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward to backend API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
+    const response = await fetch(`${backendUrl}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

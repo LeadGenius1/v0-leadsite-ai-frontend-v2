@@ -25,7 +25,7 @@ export default function TestSetupPage() {
   const [createdUserId, setCreatedUserId] = useState<string | null>(null)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-2987.up.railway.app"
 
   const updateResult = (name: string, status: TestResult["status"], message?: string, duration?: number) => {
     setResults((prev) => {
