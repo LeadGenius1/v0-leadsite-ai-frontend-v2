@@ -1,9 +1,11 @@
 /**
  * LeadSite.AI Frontend API Client
- * Connects to backend at https://api.leadsite.ai
+ * Uses relative URLs to leverage Next.js rewrites (proxies to backend)
+ * This avoids CORS issues and DNS configuration requirements
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.leadsite.ai"
+// Use empty string for relative URLs (leverages Next.js rewrites)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
 /**
  * Generic API fetch wrapper with error handling

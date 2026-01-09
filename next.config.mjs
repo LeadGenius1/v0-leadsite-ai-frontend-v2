@@ -15,6 +15,14 @@ const nextConfig = {
     }
     return config
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://backend-production-2987.up.railway.app/api/:path*',
+      },
+    ]
+  },
 }
 
 export default nextConfig
